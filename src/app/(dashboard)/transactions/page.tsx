@@ -19,6 +19,13 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2, Pencil, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -66,6 +73,10 @@ export default function TransactionsPage() {
   const [filterMonth, setFilterMonth] = useState<string>(
     new Date().toISOString().slice(0, 7)
   );
+
+  // Delete confirmation
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   // New transaction form
   const [open, setOpen] = useState(showNew);
@@ -209,11 +220,13 @@ export default function TransactionsPage() {
     setFormLoading(false);
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("确定删除这条记录？")) return;
-    const res = await fetch(`/api/transactions?id=${id}`, { method: "DELETE" });
+  async function handleDelete() {
+    if (!deleteTarget || deleteConfirmText !== "确认删除") return;
+    const res = await fetch(`/api/transactions?id=${deleteTarget}`, { method: "DELETE" });
     if (res.ok) {
       toast.success("已删除");
+      setDeleteTarget(null);
+      setDeleteConfirmText("");
       fetchTransactions();
     } else {
       toast.error("删除失败");
@@ -332,7 +345,7 @@ export default function TransactionsPage() {
                   <Pencil className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => handleDelete(tx.id)}
+                  onClick={() => { setDeleteTarget(tx.id); setDeleteConfirmText(""); }}
                   className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:text-destructive"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -342,6 +355,41 @@ export default function TransactionsPage() {
           </div>
         )}
       </GlassCard>
+
+      {/* 删除确认 Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) { setDeleteTarget(null); setDeleteConfirmText(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认删除</DialogTitle>
+            <DialogDescription>
+              删除后无法恢复，请输入 <strong>确认删除</strong> 以继续
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <Input
+              placeholder="请输入「确认删除」"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+            />
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => { setDeleteTarget(null); setDeleteConfirmText(""); }}
+              >
+                取消
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={deleteConfirmText !== "确认删除"}
+                onClick={handleDelete}
+              >
+                删除
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* 记账 / 编辑 Sheet */}
       <Sheet open={open} onOpenChange={handleSheetClose}>

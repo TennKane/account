@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Plus, Pencil, CreditCard, CheckCircle2, Circle } from "lucide-react";
+import { Plus, Pencil, Trash2, CreditCard, CheckCircle2, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -67,6 +67,10 @@ export default function CreditPage() {
     date: new Date().toISOString().split("T")[0],
     categoryId: "",
   });
+
+  // Delete confirmation
+  const [deleteTarget, setDeleteTarget] = useState<CreditBill | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   // Repay dialog
   const [repayBill, setRepayBill] = useState<CreditBill | null>(null);
@@ -183,6 +187,19 @@ export default function CreditPage() {
       accountId: accounts[0]?.id || "",
     });
     setRepayOpen(true);
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget || deleteConfirmText !== "确认删除") return;
+    const res = await fetch(`/api/credit-bills?id=${deleteTarget.id}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("已删除");
+      setDeleteTarget(null);
+      setDeleteConfirmText("");
+      fetchBills();
+    } else {
+      toast.error("删除失败");
+    }
   }
 
   async function handleRepaySubmit(e: React.FormEvent) {
@@ -351,6 +368,14 @@ export default function CreditPage() {
                       还款
                     </Button>
                   )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="px-2 text-destructive hover:text-destructive"
+                    onClick={() => { setDeleteTarget(bill); setDeleteConfirmText(""); }}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
                 </div>
               </GlassCard>
             );
@@ -449,6 +474,41 @@ export default function CreditPage() {
               {formLoading ? "保存中..." : editingBill ? "保存修改" : "创建"}
             </Button>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) { setDeleteTarget(null); setDeleteConfirmText(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认删除</DialogTitle>
+            <DialogDescription>
+              删除后无法恢复，请输入 <strong>确认删除</strong> 以继续
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <Input
+              placeholder="请输入「确认删除」"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+            />
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => { setDeleteTarget(null); setDeleteConfirmText(""); }}
+              >
+                取消
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={deleteConfirmText !== "确认删除"}
+                onClick={handleDelete}
+              >
+                删除
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
