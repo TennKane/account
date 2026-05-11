@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
-import { transactions, accounts } from "@/db/schema";
+import { transactions, accounts, creditBills } from "@/db/schema";
 import { eq, and, gte, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { DashboardClient } from "./dashboard-client";
@@ -52,6 +52,34 @@ export default async function DashboardPage() {
     .where(eq(accounts.userId, userId))
     .get();
 
+  // 提前消费待还
+  const unpaidResult = await db
+    .select({
+      total: sql<number>`COALESCE(SUM(${creditBills.remainingAmount}), 0)`,
+      count: sql<number>`COUNT(*)`,
+    })
+    .from(creditBills)
+    .where(
+      and(
+        eq(creditBills.userId, userId),
+        sql`${creditBills.remainingAmount} > 0`
+      )
+    )
+    .get();
+
+  const recentUnpaid = await db
+    .select()
+    .from(creditBills)
+    .where(
+      and(
+        eq(creditBills.userId, userId),
+        sql`${creditBills.remainingAmount} > 0`
+      )
+    )
+    .orderBy(sql`${creditBills.date} DESC`)
+    .limit(3)
+    .all();
+
   // 最近交易
   const recentTransactions = await db
     .select()
@@ -66,6 +94,9 @@ export default async function DashboardPage() {
       income={Number(incomeResult?.total || 0)}
       expense={Number(expenseResult?.total || 0)}
       totalAssets={Number(accountsResult?.total || 0)}
+      unpaidTotal={Number(unpaidResult?.total || 0)}
+      unpaidCount={Number(unpaidResult?.count || 0)}
+      recentUnpaid={recentUnpaid}
       recentTransactions={recentTransactions}
     />
   );
