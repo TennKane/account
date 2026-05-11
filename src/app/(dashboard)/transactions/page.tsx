@@ -191,7 +191,11 @@ export default function TransactionsPage() {
         <div className="flex flex-wrap gap-3">
           <Select value={filterType} onValueChange={(v) => v && setFilterType(v)}>
             <SelectTrigger className="w-28">
-              <SelectValue placeholder="全部" />
+              <SelectValue placeholder="全部">
+                {(v: string | null) =>
+                  v === "all" ? "全部" : v === "expense" ? "支出" : v === "income" ? "收入" : "全部"
+                }
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全部</SelectItem>
@@ -202,7 +206,13 @@ export default function TransactionsPage() {
 
           <Select value={filterAccount} onValueChange={(v) => v && setFilterAccount(v)}>
             <SelectTrigger className="w-32">
-              <SelectValue placeholder="全部账户" />
+              <SelectValue placeholder="全部账户">
+                {(v: string | null) => {
+                  if (!v || v === "all") return "全部账户";
+                  const acct = accounts.find((a) => a.id === v);
+                  return acct ? acct.name : "全部账户";
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全部账户</SelectItem>
