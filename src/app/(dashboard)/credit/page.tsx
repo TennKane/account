@@ -290,6 +290,8 @@ export default function CreditPage() {
               <SelectItem value="all">全部来源</SelectItem>
               <SelectItem value="花呗">花呗</SelectItem>
               <SelectItem value="京东白条">京东白条</SelectItem>
+              <SelectItem value="拼多多">拼多多</SelectItem>
+              <SelectItem value="美团">美团</SelectItem>
               <SelectItem value="信用卡">信用卡</SelectItem>
               <SelectItem value="其他">其他</SelectItem>
             </SelectContent>
@@ -455,6 +457,8 @@ export default function CreditPage() {
                 <SelectContent>
                   <SelectItem value="花呗">花呗</SelectItem>
                   <SelectItem value="京东白条">京东白条</SelectItem>
+                  <SelectItem value="拼多多">拼多多</SelectItem>
+                  <SelectItem value="美团">美团</SelectItem>
                   <SelectItem value="信用卡">信用卡</SelectItem>
                   <SelectItem value="其他">其他</SelectItem>
                 </SelectContent>
