@@ -9,6 +9,7 @@ import {
   ArrowLeftRight,
   Wallet,
   Tags,
+  CreditCard,
   Settings,
   LogOut,
 } from "lucide-react";
@@ -16,6 +17,7 @@ import {
 const navItems = [
   { label: "仪表盘", href: "/", icon: LayoutDashboard },
   { label: "账单", href: "/transactions", icon: ArrowLeftRight },
+  { label: "提前消费", href: "/credit", icon: CreditCard },
   { label: "账户", href: "/accounts", icon: Wallet },
   { label: "分类", href: "/categories", icon: Tags },
 ];
