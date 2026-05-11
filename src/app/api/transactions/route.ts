@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     eq(transactions.userId, userId),
   ];
 
-  if (type) filters.push(eq(transactions.type, type));
+  if (type) filters.push(eq(transactions.type, type as "income" | "expense"));
   if (accountId) filters.push(eq(transactions.accountId, accountId));
   if (categoryId) filters.push(eq(transactions.categoryId, categoryId));
   if (month) {
