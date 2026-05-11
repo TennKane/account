@@ -369,7 +369,13 @@ export default function CreditPage() {
                 onValueChange={(v) => v && setNewForm((prev) => ({ ...prev, categoryId: v }))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="选择分类" />
+                  <SelectValue placeholder="选择分类">
+                    {(value: string | null) => {
+                      if (!value) return "选择分类";
+                      const cat = expenseCategories.find((c) => c.id === value);
+                      return cat ? `${cat.icon} ${cat.name}` : "选择分类";
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {expenseCategories.map((c) => (
