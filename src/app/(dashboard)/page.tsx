@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { transactions, accounts } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, and, gte, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { DashboardClient } from "./dashboard-client";
 
@@ -13,7 +13,7 @@ export default async function DashboardPage() {
 
   // 本月收支统计
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const incomeResult = await db
     .select({
@@ -21,9 +21,11 @@ export default async function DashboardPage() {
     })
     .from(transactions)
     .where(
-      sql`${transactions.userId} = ${userId}
-        AND ${transactions.type} = 'income'
-        AND ${transactions.date} >= ${startOfMonth}`
+      and(
+        eq(transactions.userId, userId),
+        eq(transactions.type, "income"),
+        gte(transactions.date, startOfMonth)
+      )
     )
     .get();
 
@@ -33,9 +35,11 @@ export default async function DashboardPage() {
     })
     .from(transactions)
     .where(
-      sql`${transactions.userId} = ${userId}
-        AND ${transactions.type} = 'expense'
-        AND ${transactions.date} >= ${startOfMonth}`
+      and(
+        eq(transactions.userId, userId),
+        eq(transactions.type, "expense"),
+        gte(transactions.date, startOfMonth)
+      )
     )
     .get();
 

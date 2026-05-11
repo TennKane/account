@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { transactions, accounts, categories } from "@/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, gte, lt, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 export async function GET(req: Request) {
@@ -16,16 +16,19 @@ export async function GET(req: Request) {
   const month = searchParams.get("month");
 
   const userId = session.user.id!;
-  let conditions = sql`${transactions.userId} = ${userId}`;
+  const filters: any[] = [
+    eq(transactions.userId, userId),
+  ];
 
-  if (type) conditions = sql`${conditions} AND ${transactions.type} = ${type}`;
-  if (accountId) conditions = sql`${conditions} AND ${transactions.accountId} = ${accountId}`;
-  if (categoryId) conditions = sql`${conditions} AND ${transactions.categoryId} = ${categoryId}`;
+  if (type) filters.push(eq(transactions.type, type));
+  if (accountId) filters.push(eq(transactions.accountId, accountId));
+  if (categoryId) filters.push(eq(transactions.categoryId, categoryId));
   if (month) {
     const [year, mon] = month.split("-");
-    const start = new Date(Number(year), Number(mon) - 1, 1).getTime();
-    const end = new Date(Number(year), Number(mon), 1).getTime();
-    conditions = sql`${conditions} AND ${transactions.date} >= ${start} AND ${transactions.date} < ${end}`;
+    const start = new Date(Number(year), Number(mon) - 1, 1);
+    const end = new Date(Number(year), Number(mon), 1);
+    filters.push(gte(transactions.date, start));
+    filters.push(lt(transactions.date, end));
   }
 
   const list = await db
@@ -45,7 +48,7 @@ export async function GET(req: Request) {
     .from(transactions)
     .leftJoin(accounts, eq(transactions.accountId, accounts.id))
     .leftJoin(categories, eq(transactions.categoryId, categories.id))
-    .where(conditions)
+    .where(and(...filters))
     .orderBy(sql`${transactions.date} DESC`)
     .all();
 
