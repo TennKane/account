@@ -13,13 +13,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -83,6 +76,7 @@ export default function TransactionsPage() {
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // New transaction form
   const [open, setOpen] = useState(showNew);
@@ -229,6 +223,7 @@ export default function TransactionsPage() {
 
   async function handleDelete() {
     if (!deleteTarget || deleteConfirmText !== "确认删除") return;
+    setDeleteLoading(true);
     const res = await fetch(`/api/transactions?id=${deleteTarget}`, { method: "DELETE" });
     if (res.ok) {
       toast.success("已删除");
@@ -238,6 +233,7 @@ export default function TransactionsPage() {
     } else {
       toast.error("删除失败");
     }
+    setDeleteLoading(false);
   }
 
   const filteredCategories = categories.filter((c) => c.type === formData.type);
@@ -394,27 +390,27 @@ export default function TransactionsPage() {
               </Button>
               <Button
                 variant="destructive"
-                disabled={deleteConfirmText !== "确认删除"}
+                disabled={deleteConfirmText !== "确认删除" || deleteLoading}
                 onClick={handleDelete}
               >
-                删除
+                {deleteLoading ? "删除中..." : "删除"}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* 记账 / 编辑 Sheet */}
-      <Sheet open={open} onOpenChange={handleSheetClose}>
-        <SheetContent className="w-full sm:max-w-lg">
-          <SheetHeader>
-            <SheetTitle>{editingTx ? "编辑账单" : "记一笔"}</SheetTitle>
-            <SheetDescription>
+      {/* 记账 / 编辑 Dialog */}
+      <Dialog open={open} onOpenChange={handleSheetClose}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingTx ? "编辑账单" : "记一笔"}</DialogTitle>
+            <DialogDescription>
               {editingTx ? "修改收支明细（日期不可变更）" : "记录你的收支明细"}
-            </SheetDescription>
-          </SheetHeader>
+            </DialogDescription>
+          </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-5 mt-6 px-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* 类型选择 */}
             <div className="flex gap-2">
               <Button
@@ -551,8 +547,8 @@ export default function TransactionsPage() {
               {formLoading ? "保存中..." : editingTx ? "保存修改" : "保存"}
             </Button>
           </form>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

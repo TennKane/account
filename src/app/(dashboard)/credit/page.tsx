@@ -81,6 +81,7 @@ export default function CreditPage() {
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<CreditBill | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Repay dialog
   const [repayBill, setRepayBill] = useState<CreditBill | null>(null);
@@ -205,6 +206,7 @@ export default function CreditPage() {
 
   async function handleDelete() {
     if (!deleteTarget || deleteConfirmText !== "确认删除") return;
+    setDeleteLoading(true);
     const res = await fetch(`/api/credit-bills?id=${deleteTarget.id}`, { method: "DELETE" });
     if (res.ok) {
       toast.success("已删除");
@@ -214,6 +216,7 @@ export default function CreditPage() {
     } else {
       toast.error("删除失败");
     }
+    setDeleteLoading(false);
   }
 
   async function handleRepaySubmit(e: React.FormEvent) {
@@ -261,7 +264,7 @@ export default function CreditPage() {
         <button
           onClick={() => setTab("unpaid")}
           className={cn(
-            "px-4 py-2 rounded-lg text-sm font-medium transition-all",
+            "px-4 py-2 rounded-lg text-sm font-medium transition-all active:bg-accent/70",
             tab === "unpaid"
               ? "bg-background shadow-sm text-foreground"
               : "text-muted-foreground hover:text-foreground"
@@ -337,7 +340,7 @@ export default function CreditPage() {
               : 100;
 
             return (
-              <GlassCard key={bill.id} className="p-5">
+              <GlassCard key={bill.id} className="p-5 active:scale-[0.98] transition-transform">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div
@@ -555,10 +558,10 @@ export default function CreditPage() {
               </Button>
               <Button
                 variant="destructive"
-                disabled={deleteConfirmText !== "确认删除"}
+                disabled={deleteConfirmText !== "确认删除" || deleteLoading}
                 onClick={handleDelete}
               >
-                删除
+                {deleteLoading ? "删除中..." : "删除"}
               </Button>
             </div>
           </div>

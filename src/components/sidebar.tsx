@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import {
@@ -12,6 +13,7 @@ import {
   CreditCard,
   Settings,
   LogOut,
+  Loader2,
 } from "lucide-react";
 
 const navItems = [
@@ -28,6 +30,7 @@ interface SidebarProps {
 
 export function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
+  const [signingOut, setSigningOut] = useState(false);
 
   return (
     <aside className="w-64 shrink-0 p-4 hidden md:block">
@@ -51,7 +54,7 @@ export function Sidebar({ user }: SidebarProps) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
+                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all active:bg-accent/70",
                   isActive
                     ? "bg-primary/15 text-primary"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent"
@@ -79,17 +82,21 @@ export function Sidebar({ user }: SidebarProps) {
           </div>
           <Link
             href="/settings"
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-all active:bg-accent/70"
           >
             <Settings className="w-4 h-4" />
             设置
           </Link>
           <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+            onClick={async () => {
+              setSigningOut(true);
+              await signOut({ callbackUrl: "/login" });
+            }}
+            disabled={signingOut}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all active:bg-destructive/15 disabled:opacity-50"
           >
-            <LogOut className="w-4 h-4" />
-            退出登录
+            {signingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
+            {signingOut ? "退出中..." : "退出登录"}
           </button>
         </div>
       </div>
@@ -110,7 +117,7 @@ export function MobileNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors",
+                "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors active:bg-accent/70",
                 isActive
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"

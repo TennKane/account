@@ -200,7 +200,7 @@ export function DashboardClient({
             <h2 className="font-semibold">近期待还</h2>
             <Link
               href="/credit"
-              className="text-sm text-primary hover:underline"
+              className="text-sm text-primary hover:underline active:scale-[0.98] transition-transform"
             >
               查看全部
             </Link>

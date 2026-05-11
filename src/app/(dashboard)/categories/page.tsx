@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Tags, Plus, Trash2 } from "lucide-react";
+import { Tags, Plus, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface Category {
@@ -47,6 +47,7 @@ export default function CategoriesPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     type: "expense" as "income" | "expense",
@@ -93,6 +94,7 @@ export default function CategoriesPage() {
 
   async function handleDelete(id: string, name: string) {
     if (!confirm(`确定删除分类「${name}」？`)) return;
+    setDeleting(true);
     const res = await fetch(`/api/categories?id=${id}`, { method: "DELETE" });
     if (res.ok) {
       toast.success("已删除");
@@ -100,6 +102,7 @@ export default function CategoriesPage() {
     } else {
       toast.error("删除失败");
     }
+    setDeleting(false);
   }
 
   const expenseCategories = categories.filter((c) => c.type === "expense");
@@ -140,9 +143,10 @@ export default function CategoriesPage() {
                     <span className="text-sm font-medium flex-1">{cat.name}</span>
                     <button
                       onClick={() => handleDelete(cat.id, cat.name)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive"
+                      disabled={deleting}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive disabled:opacity-50"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                     </button>
                   </div>
                 ))}
@@ -171,9 +175,10 @@ export default function CategoriesPage() {
                     <span className="text-sm font-medium flex-1">{cat.name}</span>
                     <button
                       onClick={() => handleDelete(cat.id, cat.name)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive"
+                      disabled={deleting}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive disabled:opacity-50"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                     </button>
                   </div>
                 ))}

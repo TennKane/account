@@ -20,7 +20,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Wallet, Plus, Trash2, Edit3 } from "lucide-react";
+import { Wallet, Plus, Trash2, Edit3, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 const accountTypeLabels: Record<string, string> = {
@@ -46,6 +46,7 @@ export default function AccountsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [editAccount, setEditAccount] = useState<Account | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     type: "cash",
@@ -116,6 +117,7 @@ export default function AccountsPage() {
 
   async function handleDelete(id: string, name: string) {
     if (!confirm(`确定删除账户「${name}」？相关的交易记录也会被删除。`)) return;
+    setDeleting(true);
     const res = await fetch(`/api/accounts?id=${id}`, { method: "DELETE" });
     if (res.ok) {
       toast.success("已删除");
@@ -123,6 +125,7 @@ export default function AccountsPage() {
     } else {
       toast.error("删除失败");
     }
+    setDeleting(false);
   }
 
   const totalBalance = accounts.reduce((sum, a) => sum + a.balance, 0);
@@ -160,7 +163,7 @@ export default function AccountsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {accounts.map((account) => (
             <GlassCard key={account.id} className="p-5">
-              <Link href={`/accounts/${account.id}`} className="block">
+              <Link href={`/accounts/${account.id}`} className="block active:scale-[0.98] transition-transform">
                 <div className="flex items-start justify-between">
                   <div className="pointer-events-none">
                     <p className="font-semibold">{account.name}</p>
@@ -186,9 +189,10 @@ export default function AccountsPage() {
                         e.stopPropagation();
                         handleDelete(account.id, account.name);
                       }}
-                      className="p-2 hover:text-destructive transition-colors"
+                      disabled={deleting}
+                      className="p-2 hover:text-destructive transition-colors disabled:opacity-50"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
