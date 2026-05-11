@@ -23,8 +23,8 @@ export async function GET(req: Request) {
   if (categoryId) conditions = sql`${conditions} AND ${transactions.categoryId} = ${categoryId}`;
   if (month) {
     const [year, mon] = month.split("-");
-    const start = new Date(Number(year), Number(mon) - 1, 1);
-    const end = new Date(Number(year), Number(mon), 1);
+    const start = new Date(Number(year), Number(mon) - 1, 1).getTime();
+    const end = new Date(Number(year), Number(mon), 1).getTime();
     conditions = sql`${conditions} AND ${transactions.date} >= ${start} AND ${transactions.date} < ${end}`;
   }
 

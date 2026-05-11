@@ -13,7 +13,7 @@ export default async function DashboardPage() {
 
   // 本月收支统计
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
   const incomeResult = await db
     .select({
