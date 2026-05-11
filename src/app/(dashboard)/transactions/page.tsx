@@ -285,7 +285,7 @@ export default function TransactionsPage() {
             <SheetDescription>记录你的收支明细</SheetDescription>
           </SheetHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-5 mt-6">
+          <form onSubmit={handleSubmit} className="space-y-5 mt-6 px-4">
             {/* 类型选择 */}
             <div className="flex gap-2">
               <Button
