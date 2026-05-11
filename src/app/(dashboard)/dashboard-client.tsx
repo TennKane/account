@@ -207,7 +207,6 @@ export function DashboardClient({
             </div>
           </GlassCard>
         </div>
-      )}
 
       {/* 近期待还 */}
       {recentUnpaid.length > 0 && (
