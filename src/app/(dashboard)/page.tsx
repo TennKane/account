@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
-import { transactions, accounts, creditBills } from "@/db/schema";
+import { transactions, accounts, creditBills, categories } from "@/db/schema";
 import { eq, and, gte, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { DashboardClient } from "./dashboard-client";
@@ -80,6 +80,61 @@ export default async function DashboardPage() {
     .limit(3)
     .all();
 
+  // 近6月收支趋势
+  const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+  const monthlyRows = await db
+    .select({
+      month: sql<string>`strftime('%Y-%m', ${transactions.date} / 1000, 'unixepoch')`,
+      type: transactions.type,
+      total: sql<number>`COALESCE(SUM(${transactions.amount}), 0)`,
+    })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.userId, userId),
+        gte(transactions.date, sixMonthsAgo)
+      )
+    )
+    .groupBy(
+      sql`strftime('%Y-%m', ${transactions.date} / 1000, 'unixepoch')`,
+      transactions.type
+    )
+    .all();
+
+  const months: string[] = [];
+  const trendIncome: number[] = [];
+  const trendExpense: number[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const label = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    months.push(label);
+    const income = monthlyRows.find((r) => r.month === label && r.type === "income");
+    const expense = monthlyRows.find((r) => r.month === label && r.type === "expense");
+    trendIncome.push(Number(income?.total || 0));
+    trendExpense.push(Number(expense?.total || 0));
+  }
+
+  // 本月分类支出
+  const categoryExpenses = await db
+    .select({
+      categoryId: transactions.categoryId,
+      categoryName: categories.name,
+      categoryIcon: categories.icon,
+      categoryColor: categories.color,
+      total: sql<number>`COALESCE(SUM(${transactions.amount}), 0)`,
+    })
+    .from(transactions)
+    .leftJoin(categories, eq(transactions.categoryId, categories.id))
+    .where(
+      and(
+        eq(transactions.userId, userId),
+        eq(transactions.type, "expense"),
+        gte(transactions.date, startOfMonth)
+      )
+    )
+    .groupBy(transactions.categoryId)
+    .all();
+
   // 最近交易
   const recentTransactions = await db
     .select()
@@ -98,6 +153,10 @@ export default async function DashboardPage() {
       unpaidCount={Number(unpaidResult?.count || 0)}
       recentUnpaid={recentUnpaid}
       recentTransactions={recentTransactions}
+      months={months}
+      trendIncome={trendIncome}
+      trendExpense={trendExpense}
+      categoryExpenses={categoryExpenses}
     />
   );
 }

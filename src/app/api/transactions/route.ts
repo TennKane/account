@@ -14,6 +14,7 @@ export async function GET(req: Request) {
   const accountId = searchParams.get("accountId");
   const categoryId = searchParams.get("categoryId");
   const month = searchParams.get("month");
+  const q = searchParams.get("q");
 
   const userId = session.user.id!;
   const filters: any[] = [
@@ -30,6 +31,7 @@ export async function GET(req: Request) {
     filters.push(gte(transactions.date, start));
     filters.push(lt(transactions.date, end));
   }
+  if (q) filters.push(sql`${transactions.description} LIKE '%' || ${q} || '%'`);
 
   const list = await db
     .select({

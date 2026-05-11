@@ -16,8 +16,10 @@ export async function GET(req: Request) {
 
     const source = searchParams.get("source");
     const month = searchParams.get("month");
+    const q = searchParams.get("q");
 
     if (source) filters.push(eq(creditBills.source, source));
+    if (q) filters.push(sql`${creditBills.description} LIKE '%' || ${q} || '%'`);
     if (month) {
       const [year, mon] = month.split("-");
       const start = new Date(Number(year), Number(mon) - 1, 1);

@@ -59,6 +59,7 @@ export default function CreditPage() {
   const [filterMonth, setFilterMonth] = useState<string>(
     new Date().toISOString().slice(0, 7)
   );
+  const [searchQuery, setSearchQuery] = useState("");
 
   // New/Edit bill dialog
   const [editingBill, setEditingBill] = useState<CreditBill | null>(null);
@@ -90,6 +91,7 @@ export default function CreditPage() {
       const params = new URLSearchParams();
       if (filterSource !== "all") params.set("source", filterSource);
       if (filterMonth) params.set("month", filterMonth);
+      if (searchQuery) params.set("q", searchQuery);
       const res = await fetch(`/api/credit-bills?${params}`);
       const data = await res.json();
       setBills(Array.isArray(data) ? data : []);
@@ -98,7 +100,7 @@ export default function CreditPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterSource, filterMonth]);
+  }, [filterSource, filterMonth, searchQuery]);
 
   const fetchAccounts = useCallback(async () => {
     try {
@@ -302,6 +304,12 @@ export default function CreditPage() {
             value={filterMonth}
             onChange={(e) => setFilterMonth(e.target.value)}
             className="w-44"
+          />
+          <Input
+            placeholder="搜索备注..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-40"
           />
         </div>
       </GlassCard>

@@ -73,6 +73,7 @@ export default function TransactionsPage() {
   const [filterMonth, setFilterMonth] = useState<string>(
     new Date().toISOString().slice(0, 7)
   );
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
@@ -98,12 +99,13 @@ export default function TransactionsPage() {
     if (filterType !== "all") params.set("type", filterType);
     if (filterAccount !== "all") params.set("accountId", filterAccount);
     if (filterMonth) params.set("month", filterMonth);
+    if (searchQuery) params.set("q", searchQuery);
 
     const res = await fetch(`/api/transactions?${params}`);
     const data = await res.json();
     setTransactions(data);
     setLoading(false);
-  }, [filterType, filterAccount, filterMonth]);
+  }, [filterType, filterAccount, filterMonth, searchQuery]);
 
   const fetchAccounts = useCallback(async () => {
     const res = await fetch("/api/accounts");
@@ -288,6 +290,12 @@ export default function TransactionsPage() {
             value={filterMonth}
             onChange={(e) => setFilterMonth(e.target.value)}
             className="w-44"
+          />
+          <Input
+            placeholder="搜索备注..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-40"
           />
         </div>
       </GlassCard>
