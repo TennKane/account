@@ -279,7 +279,7 @@ export default function TransactionsPage() {
 
       {/* 记账 Sheet */}
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent className="w-full sm:max-w-md">
+        <SheetContent className="w-full sm:max-w-lg">
           <SheetHeader>
             <SheetTitle>记一笔</SheetTitle>
             <SheetDescription>记录你的收支明细</SheetDescription>
@@ -341,8 +341,14 @@ export default function TransactionsPage() {
                 value={formData.categoryId}
                 onValueChange={(v) => v && setFormData((prev) => ({ ...prev, categoryId: v }))}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="选择分类" />
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="选择分类">
+                    {(value: string | null) => {
+                      if (!value) return "选择分类";
+                      const cat = filteredCategories.find((c) => c.id === value);
+                      return cat ? `${cat.icon} ${cat.name}` : "选择分类";
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {filteredCategories.map((c) => (
@@ -361,8 +367,14 @@ export default function TransactionsPage() {
                 value={formData.accountId}
                 onValueChange={(v) => v && setFormData((prev) => ({ ...prev, accountId: v }))}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="选择账户" />
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="选择账户">
+                    {(value: string | null) => {
+                      if (!value) return "选择账户";
+                      const acct = accounts.find((a) => a.id === value);
+                      return acct ? acct.name : "选择账户";
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {accounts.map((a) => (
