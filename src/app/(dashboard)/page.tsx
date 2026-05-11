@@ -80,13 +80,13 @@ export default async function DashboardPage() {
     .limit(3)
     .all();
 
-  // 近6月收支趋势
+  // 近6月收支趋势 — 用 JS 按月分组，避免 strftime 精度问题
   const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-  const monthlyRows = await db
+  const allInRange = await db
     .select({
-      month: sql<string>`strftime('%Y-%m', ${transactions.date} / 1000, 'unixepoch')`,
       type: transactions.type,
-      total: sql<number>`COALESCE(SUM(${transactions.amount}), 0)`,
+      amount: transactions.amount,
+      date: transactions.date,
     })
     .from(transactions)
     .where(
@@ -95,11 +95,17 @@ export default async function DashboardPage() {
         gte(transactions.date, sixMonthsAgo)
       )
     )
-    .groupBy(
-      sql`strftime('%Y-%m', ${transactions.date} / 1000, 'unixepoch')`,
-      transactions.type
-    )
     .all();
+
+  const monthMap = new Map<string, { income: number; expense: number }>();
+  for (const row of allInRange) {
+    const d = new Date(row.date);
+    const label = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const entry = monthMap.get(label) || { income: 0, expense: 0 };
+    if (row.type === "income") entry.income += Number(row.amount);
+    else entry.expense += Number(row.amount);
+    monthMap.set(label, entry);
+  }
 
   const months: string[] = [];
   const trendIncome: number[] = [];
@@ -108,10 +114,9 @@ export default async function DashboardPage() {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const label = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     months.push(label);
-    const income = monthlyRows.find((r) => r.month === label && r.type === "income");
-    const expense = monthlyRows.find((r) => r.month === label && r.type === "expense");
-    trendIncome.push(Number(income?.total || 0));
-    trendExpense.push(Number(expense?.total || 0));
+    const entry = monthMap.get(label);
+    trendIncome.push(entry?.income || 0);
+    trendExpense.push(entry?.expense || 0);
   }
 
   // 本月分类支出

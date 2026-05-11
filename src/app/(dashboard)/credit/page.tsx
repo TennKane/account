@@ -23,6 +23,11 @@ import { Plus, Pencil, Trash2, CreditCard, CheckCircle2, Circle } from "lucide-r
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
+function getTodayLocal() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 interface CreditBill {
   id: string;
   amount: number;
@@ -57,7 +62,7 @@ export default function CreditPage() {
   const [tab, setTab] = useState<"unpaid" | "paid">("unpaid");
   const [filterSource, setFilterSource] = useState<string>("all");
   const [filterMonth, setFilterMonth] = useState<string>(
-    new Date().toISOString().slice(0, 7)
+    getTodayLocal().slice(0, 7)
   );
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -69,7 +74,7 @@ export default function CreditPage() {
     amount: "",
     source: "花呗",
     description: "",
-    date: new Date().toISOString().split("T")[0],
+    date: getTodayLocal(),
     categoryId: "",
   });
 
@@ -137,7 +142,7 @@ export default function CreditPage() {
       amount: "",
       source: "花呗",
       description: "",
-      date: new Date().toISOString().split("T")[0],
+      date: getTodayLocal(),
       categoryId: "",
     });
     setFormOpen(true);

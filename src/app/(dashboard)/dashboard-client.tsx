@@ -46,8 +46,6 @@ export function DashboardClient({
   trendExpense,
   categoryExpenses,
 }: DashboardClientProps) {
-  const balance = income - expense;
-
   const trendData = months.map((m, i) => ({
     month: m.slice(5),
     收入: trendIncome[i],
@@ -121,19 +119,6 @@ export function DashboardClient({
           </p>
         </GlassCard>
       </div>
-
-      {/* 月度结余 */}
-      <GlassCard className="p-6">
-        <p className="text-sm text-muted-foreground mb-1">本月结余</p>
-        <p
-          className={cn(
-            "text-3xl font-bold",
-            balance >= 0 ? "text-green-500" : "text-red-500"
-          )}
-        >
-          ¥{balance.toFixed(2)}
-        </p>
-      </GlassCard>
 
       {/* 图表 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

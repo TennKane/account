@@ -31,6 +31,11 @@ import { Plus, Trash2, Pencil, ArrowUpRight, ArrowDownRight } from "lucide-react
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
+function getTodayLocal() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 interface Transaction {
   id: string;
   amount: number;
@@ -71,7 +76,7 @@ export default function TransactionsPage() {
   const [filterType, setFilterType] = useState<string>("all");
   const [filterAccount, setFilterAccount] = useState<string>("all");
   const [filterMonth, setFilterMonth] = useState<string>(
-    new Date().toISOString().slice(0, 7)
+    getTodayLocal().slice(0, 7)
   );
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -87,7 +92,7 @@ export default function TransactionsPage() {
     amount: "",
     type: "expense" as "income" | "expense",
     description: "",
-    date: new Date().toISOString().split("T")[0],
+    date: getTodayLocal(),
     time: new Date().toTimeString().slice(0, 5),
     accountId: "",
     categoryId: "",
@@ -145,7 +150,7 @@ export default function TransactionsPage() {
       amount: "",
       type: "expense",
       description: "",
-      date: new Date().toISOString().split("T")[0],
+      date: getTodayLocal(),
       time: new Date().toTimeString().slice(0, 5),
       accountId: accounts[0]?.id || "",
       categoryId: "",
@@ -176,7 +181,7 @@ export default function TransactionsPage() {
   }
 
   function handleDateChange(newDate: string) {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getTodayLocal();
     const newTime = newDate < today ? "00:00" : new Date().toTimeString().slice(0, 5);
     setFormData((prev) => ({ ...prev, date: newDate, time: newTime }));
   }
