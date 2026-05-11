@@ -1,0 +1,253 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { GlassCard } from "@/components/glass-card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Wallet, Plus, Trash2, Edit3 } from "lucide-react";
+import { toast } from "sonner";
+
+const accountTypeLabels: Record<string, string> = {
+  cash: "现金",
+  bank: "银行卡",
+  credit: "信用卡",
+  savings: "储蓄",
+  wallet: "电子钱包",
+};
+
+interface Account {
+  id: string;
+  name: string;
+  type: string;
+  balance: number;
+}
+
+export default function AccountsPage() {
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Dialog
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
+  const [editAccount, setEditAccount] = useState<Account | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    type: "cash",
+    balance: "",
+  });
+
+  const fetchAccounts = useCallback(async () => {
+    const res = await fetch("/api/accounts");
+    const data = await res.json();
+    setAccounts(data);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchAccounts();
+  }, [fetchAccounts]);
+
+  function openCreate() {
+    setEditAccount(null);
+    setFormData({ name: "", type: "cash", balance: "" });
+    setDialogOpen(true);
+  }
+
+  function openEdit(account: Account) {
+    setEditAccount(account);
+    setFormData({
+      name: account.name,
+      type: account.type,
+      balance: String(account.balance),
+    });
+    setDialogOpen(true);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setFormLoading(true);
+
+    if (editAccount) {
+      const res = await fetch("/api/accounts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: editAccount.id, name: formData.name, type: formData.type }),
+      });
+      if (res.ok) {
+        toast.success("更新成功");
+        setDialogOpen(false);
+        fetchAccounts();
+      } else {
+        toast.error("更新失败");
+      }
+    } else {
+      const res = await fetch("/api/accounts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      if (res.ok) {
+        toast.success("创建成功");
+        setDialogOpen(false);
+        fetchAccounts();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "创建失败");
+      }
+    }
+    setFormLoading(false);
+  }
+
+  async function handleDelete(id: string, name: string) {
+    if (!confirm(`确定删除账户「${name}」？相关的交易记录也会被删除。`)) return;
+    const res = await fetch(`/api/accounts?id=${id}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("已删除");
+      fetchAccounts();
+    } else {
+      toast.error("删除失败");
+    }
+  }
+
+  const totalBalance = accounts.reduce((sum, a) => sum + a.balance, 0);
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">账户</h1>
+        <Button onClick={openCreate} className="gap-2">
+          <Plus className="w-4 h-4" />
+          添加账户
+        </Button>
+      </div>
+
+      {/* 总资产 */}
+      <GlassCard className="p-6 text-center">
+        <p className="text-sm text-muted-foreground mb-1">总资产</p>
+        <p className="text-3xl font-bold text-primary">
+          ¥{totalBalance.toFixed(2)}
+        </p>
+      </GlassCard>
+
+      {/* 账户列表 */}
+      {loading ? (
+        <GlassCard className="p-6 text-center text-muted-foreground">加载中...</GlassCard>
+      ) : accounts.length === 0 ? (
+        <GlassCard className="p-12 text-center text-muted-foreground">
+          <Wallet className="w-12 h-12 mx-auto mb-3 opacity-50" />
+          <p>还没有账户</p>
+          <Button variant="outline" className="mt-3" onClick={openCreate}>
+            添加第一个账户
+          </Button>
+        </GlassCard>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {accounts.map((account) => (
+            <GlassCard key={account.id} className="p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="font-semibold">{account.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {accountTypeLabels[account.type] || account.type}
+                  </p>
+                </div>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => openEdit(account)}
+                    className="p-2 hover:text-primary transition-colors"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(account.id, account.name)}
+                    className="p-2 hover:text-destructive transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              <p className="text-xl font-semibold mt-3">
+                ¥{account.balance.toFixed(2)}
+              </p>
+            </GlassCard>
+          ))}
+        </div>
+      )}
+
+      {/* 创建/编辑对话框 */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editAccount ? "编辑账户" : "添加账户"}</DialogTitle>
+            <DialogDescription>
+              {editAccount ? "修改账户信息" : "创建一个新的账户"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label>账户名称</Label>
+              <Input
+                placeholder="例如：工资卡"
+                value={formData.name}
+                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>类型</Label>
+              <Select
+                value={formData.type}
+                onValueChange={(v) => v && setFormData((prev) => ({ ...prev, type: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(accountTypeLabels).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {!editAccount && (
+              <div className="space-y-2">
+                <Label>初始余额</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={formData.balance}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, balance: e.target.value }))}
+                />
+              </div>
+            )}
+
+            <Button type="submit" className="w-full" disabled={formLoading}>
+              {formLoading ? "保存中..." : editAccount ? "保存" : "创建"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
