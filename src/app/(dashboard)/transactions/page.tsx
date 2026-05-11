@@ -75,6 +75,7 @@ export default function TransactionsPage() {
     type: "expense" as "income" | "expense",
     description: "",
     date: new Date().toISOString().split("T")[0],
+    time: new Date().toTimeString().slice(0, 5),
     accountId: "",
     categoryId: "",
   });
@@ -124,18 +125,31 @@ export default function TransactionsPage() {
     }
   }, [formData.type, categories, formData.categoryId]);
 
+  function handleDateChange(newDate: string) {
+    const today = new Date().toISOString().split("T")[0];
+    const newTime = newDate < today ? "00:00" : new Date().toTimeString().slice(0, 5);
+    setFormData((prev) => ({ ...prev, date: newDate, time: newTime }));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormLoading(true);
 
     try {
+      const dateTime = new Date(formData.date);
+      const [hours, minutes] = (formData.time || "00:00").split(":");
+      dateTime.setHours(Number(hours), Number(minutes));
+
       const res = await fetch("/api/transactions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...formData,
           amount: Number(formData.amount),
-          date: new Date(formData.date),
+          type: formData.type,
+          description: formData.description,
+          date: dateTime,
+          accountId: formData.accountId,
+          categoryId: formData.categoryId,
         }),
       });
 
@@ -153,6 +167,7 @@ export default function TransactionsPage() {
         type: "expense",
         description: "",
         date: new Date().toISOString().split("T")[0],
+        time: new Date().toTimeString().slice(0, 5),
         accountId: formData.accountId,
         categoryId: "",
       });
@@ -270,7 +285,13 @@ export default function TransactionsPage() {
                     {tx.type === "income" ? "+" : "-"}¥{tx.amount.toFixed(2)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(tx.date).toLocaleDateString("zh-CN")}
+                    {new Date(tx.date).toLocaleDateString("zh-CN")}{" "}
+                    {(() => {
+                      const d = new Date(tx.date);
+                      return d.getHours() || d.getMinutes()
+                        ? d.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })
+                        : "";
+                    })()}
                   </p>
                 </div>
                 <button
@@ -397,12 +418,21 @@ export default function TransactionsPage() {
             {/* 日期 */}
             <div className="space-y-2">
               <Label>日期</Label>
-              <Input
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData((prev) => ({ ...prev, date: e.target.value }))}
-                required
-              />
+              <div className="flex gap-2">
+                <Input
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => handleDateChange(e.target.value)}
+                  required
+                  className="flex-1"
+                />
+                <Input
+                  type="time"
+                  value={formData.time}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, time: e.target.value }))}
+                  className="w-32"
+                />
+              </div>
             </div>
 
             {/* 备注 */}
