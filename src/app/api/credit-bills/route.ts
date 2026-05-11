@@ -9,33 +9,34 @@ export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { searchParams } = new URL(req.url);
-  const status = searchParams.get("status"); // "unpaid" | "paid"
-  const userId = session.user.id!;
+  try {
+    const userId = session.user.id!;
+    const filters: any[] = [eq(creditBills.userId, userId)];
 
-  const filters: any[] = [eq(creditBills.userId, userId)];
+    const list = await db
+      .select({
+        id: creditBills.id,
+        amount: creditBills.amount,
+        remainingAmount: creditBills.remainingAmount,
+        description: creditBills.description,
+        source: creditBills.source,
+        date: creditBills.date,
+        categoryId: creditBills.categoryId,
+        categoryName: categories.name,
+        categoryIcon: categories.icon,
+        categoryColor: categories.color,
+      })
+      .from(creditBills)
+      .leftJoin(categories, eq(creditBills.categoryId, categories.id))
+      .where(and(...filters))
+      .orderBy(sql`${creditBills.date} DESC`)
+      .all();
 
-  const list = await db
-    .select({
-      id: creditBills.id,
-      amount: creditBills.amount,
-      remainingAmount: creditBills.remainingAmount,
-      description: creditBills.description,
-      source: creditBills.source,
-      date: creditBills.date,
-      categoryId: creditBills.categoryId,
-      categoryName: categories.name,
-      categoryIcon: categories.icon,
-      categoryColor: categories.color,
-    })
-    .from(creditBills)
-    .leftJoin(categories, eq(creditBills.categoryId, categories.id))
-    .where(and(...filters))
-    .orderBy(sql`${creditBills.date} DESC`)
-    .all();
-
-  // 前端根据 remainingAmount 自己区分已还/未还
-  return NextResponse.json(list);
+    return NextResponse.json(list);
+  } catch (error) {
+    console.error("Get credit bills error:", error);
+    return NextResponse.json({ error: "获取失败" }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {

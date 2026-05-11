@@ -77,22 +77,35 @@ export default function CreditPage() {
   });
 
   const fetchBills = useCallback(async () => {
-    const res = await fetch("/api/credit-bills");
-    const data = await res.json();
-    setBills(data);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/credit-bills");
+      const data = await res.json();
+      setBills(Array.isArray(data) ? data : []);
+    } catch {
+      setBills([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const fetchAccounts = useCallback(async () => {
-    const res = await fetch("/api/accounts");
-    const data = await res.json();
-    setAccounts(data);
+    try {
+      const res = await fetch("/api/accounts");
+      const data = await res.json();
+      if (Array.isArray(data)) setAccounts(data);
+    } catch {
+      // ignore
+    }
   }, []);
 
   const fetchCategories = useCallback(async () => {
-    const res = await fetch("/api/categories");
-    const data = await res.json();
-    setCategories(data.filter((c: Category) => c.type === "expense"));
+    try {
+      const res = await fetch("/api/categories");
+      const data = await res.json();
+      if (Array.isArray(data)) setCategories(data.filter((c: Category) => c.type === "expense"));
+    } catch {
+      // ignore
+    }
   }, []);
 
   useEffect(() => {
