@@ -9,6 +9,7 @@ import {
   ArrowLeftRight,
   Wallet,
   Tags,
+  Settings,
   LogOut,
 } from "lucide-react";
 
@@ -63,7 +64,7 @@ export function Sidebar({ user }: SidebarProps) {
 
         {/* User */}
         <div className="p-4 border-t border-border">
-          <div className="flex items-center gap-3 px-3 py-2 mb-2">
+          <div className="flex items-center gap-3 px-3 py-2 mb-1">
             <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-sm font-medium">
               {user.name?.[0] || "U"}
             </div>
@@ -74,6 +75,13 @@ export function Sidebar({ user }: SidebarProps) {
               </p>
             </div>
           </div>
+          <Link
+            href="/settings"
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
+          >
+            <Settings className="w-4 h-4" />
+            设置
+          </Link>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
             className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"

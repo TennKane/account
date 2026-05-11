@@ -20,7 +20,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Filter, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Plus, Trash2, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -63,7 +63,9 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<string>("all");
   const [filterAccount, setFilterAccount] = useState<string>("all");
-  const [filterMonth, setFilterMonth] = useState<string>("");
+  const [filterMonth, setFilterMonth] = useState<string>(
+    new Date().toISOString().slice(0, 7)
+  );
 
   // New transaction form
   const [open, setOpen] = useState(showNew);
@@ -186,25 +188,21 @@ export default function TransactionsPage() {
 
       {/* 筛选 */}
       <GlassCard className="p-4">
-        <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
-          <Filter className="w-4 h-4" />
-          筛选
-        </div>
         <div className="flex flex-wrap gap-3">
           <Select value={filterType} onValueChange={(v) => v && setFilterType(v)}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="类型" />
+            <SelectTrigger className="w-28">
+              <SelectValue placeholder="全部" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全部</SelectItem>
-              <SelectItem value="income">收入</SelectItem>
               <SelectItem value="expense">支出</SelectItem>
+              <SelectItem value="income">收入</SelectItem>
             </SelectContent>
           </Select>
 
           <Select value={filterAccount} onValueChange={(v) => v && setFilterAccount(v)}>
-            <SelectTrigger className="w-36">
-              <SelectValue placeholder="账户" />
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="全部账户" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">全部账户</SelectItem>
@@ -220,7 +218,7 @@ export default function TransactionsPage() {
             type="month"
             value={filterMonth}
             onChange={(e) => setFilterMonth(e.target.value)}
-            className="w-40"
+            className="w-44"
           />
         </div>
       </GlassCard>
