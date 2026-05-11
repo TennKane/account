@@ -62,8 +62,6 @@ export function DashboardClient({
       color: c.categoryColor || "#6b7280",
     }));
 
-  const hasChartData = trendData.some((d) => d.收入 > 0 || d.支出 > 0);
-
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
@@ -138,8 +136,7 @@ export function DashboardClient({
       </GlassCard>
 
       {/* 图表 */}
-      {hasChartData && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* 收支趋势 */}
           <GlassCard className="p-6">
             <h2 className="font-semibold mb-4">近 6 月收支趋势</h2>
