@@ -20,7 +20,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Plus, Trash2, Pencil, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -69,6 +69,7 @@ export default function TransactionsPage() {
 
   // New transaction form
   const [open, setOpen] = useState(showNew);
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [formData, setFormData] = useState({
     amount: "",
@@ -125,6 +126,42 @@ export default function TransactionsPage() {
     }
   }, [formData.type, categories, formData.categoryId]);
 
+  function openNew() {
+    setEditingTx(null);
+    setFormData({
+      amount: "",
+      type: "expense",
+      description: "",
+      date: new Date().toISOString().split("T")[0],
+      time: new Date().toTimeString().slice(0, 5),
+      accountId: accounts[0]?.id || "",
+      categoryId: "",
+    });
+    setOpen(true);
+  }
+
+  function openEdit(tx: Transaction) {
+    setEditingTx(tx);
+    const d = new Date(tx.date);
+    const dateStr = d.toISOString().split("T")[0];
+    const timeStr = d.toTimeString().slice(0, 5);
+    setFormData({
+      amount: String(tx.amount),
+      type: tx.type,
+      description: tx.description || "",
+      date: dateStr,
+      time: timeStr,
+      accountId: tx.accountId,
+      categoryId: tx.categoryId,
+    });
+    setOpen(true);
+  }
+
+  function handleSheetClose(open: boolean) {
+    setOpen(open);
+    if (!open) setEditingTx(null);
+  }
+
   function handleDateChange(newDate: string) {
     const today = new Date().toISOString().split("T")[0];
     const newTime = newDate < today ? "00:00" : new Date().toTimeString().slice(0, 5);
@@ -140,10 +177,12 @@ export default function TransactionsPage() {
       const [hours, minutes] = (formData.time || "00:00").split(":");
       dateTime.setHours(Number(hours), Number(minutes));
 
+      const isEdit = !!editingTx;
       const res = await fetch("/api/transactions", {
-        method: "POST",
+        method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          ...(isEdit ? { id: editingTx.id } : {}),
           amount: Number(formData.amount),
           type: formData.type,
           description: formData.description,
@@ -155,22 +194,14 @@ export default function TransactionsPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        toast.error(data.error || "创建失败");
+        toast.error(data.error || (isEdit ? "更新失败" : "创建失败"));
         setFormLoading(false);
         return;
       }
 
-      toast.success("记账成功");
+      toast.success(isEdit ? "已更新" : "记账成功");
+      setEditingTx(null);
       setOpen(false);
-      setFormData({
-        amount: "",
-        type: "expense",
-        description: "",
-        date: new Date().toISOString().split("T")[0],
-        time: new Date().toTimeString().slice(0, 5),
-        accountId: formData.accountId,
-        categoryId: "",
-      });
       fetchTransactions();
     } catch {
       toast.error("网络错误");
@@ -195,7 +226,7 @@ export default function TransactionsPage() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">账单</h1>
-        <Button onClick={() => setOpen(true)} className="gap-2">
+        <Button onClick={openNew} className="gap-2">
           <Plus className="w-4 h-4" />
           记一笔
         </Button>
@@ -295,6 +326,12 @@ export default function TransactionsPage() {
                   </p>
                 </div>
                 <button
+                  onClick={() => openEdit(tx)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:text-primary"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button
                   onClick={() => handleDelete(tx.id)}
                   className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:text-destructive"
                 >
@@ -306,12 +343,14 @@ export default function TransactionsPage() {
         )}
       </GlassCard>
 
-      {/* 记账 Sheet */}
-      <Sheet open={open} onOpenChange={setOpen}>
+      {/* 记账 / 编辑 Sheet */}
+      <Sheet open={open} onOpenChange={handleSheetClose}>
         <SheetContent className="w-full sm:max-w-lg">
           <SheetHeader>
-            <SheetTitle>记一笔</SheetTitle>
-            <SheetDescription>记录你的收支明细</SheetDescription>
+            <SheetTitle>{editingTx ? "编辑账单" : "记一笔"}</SheetTitle>
+            <SheetDescription>
+              {editingTx ? "修改收支明细（日期不可变更）" : "记录你的收支明细"}
+            </SheetDescription>
           </SheetHeader>
 
           <form onSubmit={handleSubmit} className="space-y-5 mt-6 px-4">
@@ -425,12 +464,14 @@ export default function TransactionsPage() {
                   onChange={(e) => handleDateChange(e.target.value)}
                   required
                   className="flex-1"
+                  disabled={!!editingTx}
                 />
                 <Input
                   type="time"
                   value={formData.time}
                   onChange={(e) => setFormData((prev) => ({ ...prev, time: e.target.value }))}
                   className="w-32"
+                  disabled={!!editingTx}
                 />
               </div>
             </div>
@@ -446,7 +487,7 @@ export default function TransactionsPage() {
             </div>
 
             <Button type="submit" className="w-full h-12" disabled={formLoading}>
-              {formLoading ? "保存中..." : "保存"}
+              {formLoading ? "保存中..." : editingTx ? "保存修改" : "保存"}
             </Button>
           </form>
         </SheetContent>

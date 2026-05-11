@@ -104,6 +104,80 @@ export async function POST(req: Request) {
   }
 }
 
+export async function PUT(req: Request) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const body = await req.json();
+    const { id, type, amount, description, categoryId, accountId } = body;
+
+    if (!id || !amount || !type || !accountId || !categoryId) {
+      return NextResponse.json({ error: "请填写必要字段" }, { status: 400 });
+    }
+
+    const userId = session.user.id!;
+
+    // 获取原交易
+    const oldTx = await db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.id, id))
+      .get();
+
+    if (!oldTx || oldTx.userId !== userId) {
+      return NextResponse.json({ error: "交易不存在" }, { status: 404 });
+    }
+
+    // 撤销原交易对旧账户的余额影响
+    const oldAccount = await db
+      .select()
+      .from(accounts)
+      .where(eq(accounts.id, oldTx.accountId))
+      .get();
+
+    if (oldAccount) {
+      const reverseAmount = oldTx.type === "income" ? -oldTx.amount : oldTx.amount;
+      await db
+        .update(accounts)
+        .set({ balance: oldAccount.balance + reverseAmount })
+        .where(eq(accounts.id, oldTx.accountId));
+    }
+
+    // 应用新交易对新账户的余额影响（即使账户没变也重新计算）
+    const newAccount = await db
+      .select()
+      .from(accounts)
+      .where(eq(accounts.id, accountId))
+      .get();
+
+    if (newAccount) {
+      const balanceChange = type === "income" ? Number(amount) : -Number(amount);
+      await db
+        .update(accounts)
+        .set({ balance: newAccount.balance + balanceChange })
+        .where(eq(accounts.id, accountId));
+    }
+
+    // 更新交易记录
+    await db
+      .update(transactions)
+      .set({
+        type,
+        amount: Number(amount),
+        description: description || "",
+        categoryId,
+        accountId,
+      })
+      .where(eq(transactions.id, id));
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Update transaction error:", error);
+    return NextResponse.json({ error: "更新失败" }, { status: 500 });
+  }
+}
+
 export async function DELETE(req: Request) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
