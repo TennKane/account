@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { creditBills, categories } from "@/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, gte, lt, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 export async function GET(req: Request) {
@@ -10,8 +10,21 @@ export async function GET(req: Request) {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
+    const { searchParams } = new URL(req.url);
     const userId = session.user.id!;
     const filters: any[] = [eq(creditBills.userId, userId)];
+
+    const source = searchParams.get("source");
+    const month = searchParams.get("month");
+
+    if (source) filters.push(eq(creditBills.source, source));
+    if (month) {
+      const [year, mon] = month.split("-");
+      const start = new Date(Number(year), Number(mon) - 1, 1);
+      const end = new Date(Number(year), Number(mon), 1);
+      filters.push(gte(creditBills.date, start));
+      filters.push(lt(creditBills.date, end));
+    }
 
     const list = await db
       .select({

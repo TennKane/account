@@ -55,6 +55,10 @@ export default function CreditPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"unpaid" | "paid">("unpaid");
+  const [filterSource, setFilterSource] = useState<string>("all");
+  const [filterMonth, setFilterMonth] = useState<string>(
+    new Date().toISOString().slice(0, 7)
+  );
 
   // New/Edit bill dialog
   const [editingBill, setEditingBill] = useState<CreditBill | null>(null);
@@ -83,7 +87,10 @@ export default function CreditPage() {
 
   const fetchBills = useCallback(async () => {
     try {
-      const res = await fetch("/api/credit-bills");
+      const params = new URLSearchParams();
+      if (filterSource !== "all") params.set("source", filterSource);
+      if (filterMonth) params.set("month", filterMonth);
+      const res = await fetch(`/api/credit-bills?${params}`);
       const data = await res.json();
       setBills(Array.isArray(data) ? data : []);
     } catch {
@@ -91,7 +98,7 @@ export default function CreditPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filterSource, filterMonth]);
 
   const fetchAccounts = useCallback(async () => {
     try {
@@ -267,6 +274,35 @@ export default function CreditPage() {
           已还 ({paid.length})
         </button>
       </div>
+
+      {/* Filter */}
+      <GlassCard className="p-4">
+        <div className="flex flex-wrap gap-3">
+          <Select value={filterSource} onValueChange={(v) => v && setFilterSource(v)}>
+            <SelectTrigger className="w-28">
+              <SelectValue>
+                {(v: string | null) =>
+                  v === "all" ? "全部来源" : v || "全部来源"
+                }
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部来源</SelectItem>
+              <SelectItem value="花呗">花呗</SelectItem>
+              <SelectItem value="京东白条">京东白条</SelectItem>
+              <SelectItem value="信用卡">信用卡</SelectItem>
+              <SelectItem value="其他">其他</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            type="month"
+            value={filterMonth}
+            onChange={(e) => setFilterMonth(e.target.value)}
+            className="w-44"
+          />
+        </div>
+      </GlassCard>
 
       {/* Bill List */}
       {loading ? (
