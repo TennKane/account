@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { GlassCard } from "@/components/glass-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -159,31 +160,42 @@ export default function AccountsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {accounts.map((account) => (
             <GlassCard key={account.id} className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-semibold">{account.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {accountTypeLabels[account.type] || account.type}
-                  </p>
-                </div>
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => openEdit(account)}
-                    className="p-2 hover:text-primary transition-colors"
+              <Link href={`/accounts/${account.id}`} className="block">
+                <div className="flex items-start justify-between">
+                  <div className="pointer-events-none">
+                    <p className="font-semibold">{account.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {accountTypeLabels[account.type] || account.type}
+                    </p>
+                  </div>
+                  <div
+                    className="flex gap-1"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <Edit3 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(account.id, account.name)}
-                    className="p-2 hover:text-destructive transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEdit(account);
+                      }}
+                      className="p-2 hover:text-primary transition-colors"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(account.id, account.name);
+                      }}
+                      className="p-2 hover:text-destructive transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <p className="text-xl font-semibold mt-3">
-                ¥{account.balance.toFixed(2)}
-              </p>
+                <p className="text-xl font-semibold mt-3 pointer-events-none">
+                  ¥{account.balance.toFixed(2)}
+                </p>
+              </Link>
             </GlassCard>
           ))}
         </div>
