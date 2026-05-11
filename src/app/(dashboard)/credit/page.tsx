@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Plus, CreditCard, CheckCircle2, Circle } from "lucide-react";
+import { Plus, Pencil, CreditCard, CheckCircle2, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -56,9 +56,10 @@ export default function CreditPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"unpaid" | "paid">("unpaid");
 
-  // New bill dialog
-  const [newOpen, setNewOpen] = useState(false);
-  const [newLoading, setNewLoading] = useState(false);
+  // New/Edit bill dialog
+  const [editingBill, setEditingBill] = useState<CreditBill | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
   const [newForm, setNewForm] = useState({
     amount: "",
     source: "花呗",
@@ -117,14 +118,46 @@ export default function CreditPage() {
   const unpaid = bills.filter((b) => b.remainingAmount > 0);
   const paid = bills.filter((b) => b.remainingAmount <= 0);
 
-  async function handleNewSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setNewLoading(true);
+  function openNew() {
+    setEditingBill(null);
+    setNewForm({
+      amount: "",
+      source: "花呗",
+      description: "",
+      date: new Date().toISOString().split("T")[0],
+      categoryId: "",
+    });
+    setFormOpen(true);
+  }
 
+  function openEdit(bill: CreditBill) {
+    setEditingBill(bill);
+    const d = new Date(bill.date);
+    setNewForm({
+      amount: String(bill.amount),
+      source: bill.source,
+      description: bill.description || "",
+      date: d.toISOString().split("T")[0],
+      categoryId: bill.categoryId,
+    });
+    setFormOpen(true);
+  }
+
+  function handleFormClose(open: boolean) {
+    setFormOpen(open);
+    if (!open) setEditingBill(null);
+  }
+
+  async function handleFormSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setFormLoading(true);
+
+    const isEdit = !!editingBill;
     const res = await fetch("/api/credit-bills", {
-      method: "POST",
+      method: isEdit ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        ...(isEdit ? { id: editingBill.id } : {}),
         ...newForm,
         amount: Number(newForm.amount),
         date: new Date(newForm.date),
@@ -132,21 +165,15 @@ export default function CreditPage() {
     });
 
     if (res.ok) {
-      toast.success("创建成功");
-      setNewOpen(false);
-      setNewForm({
-        amount: "",
-        source: "花呗",
-        description: "",
-        date: new Date().toISOString().split("T")[0],
-        categoryId: "",
-      });
+      toast.success(isEdit ? "已更新" : "创建成功");
+      setEditingBill(null);
+      setFormOpen(false);
       fetchBills();
     } else {
       const data = await res.json();
-      toast.error(data.error || "创建失败");
+      toast.error(data.error || (isEdit ? "更新失败" : "创建失败"));
     }
-    setNewLoading(false);
+    setFormLoading(false);
   }
 
   function openRepay(bill: CreditBill) {
@@ -192,7 +219,7 @@ export default function CreditPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">提前消费</h1>
-        <Button onClick={() => setNewOpen(true)} className="gap-2">
+        <Button onClick={openNew} className="gap-2">
           <Plus className="w-4 h-4" />
           新建账单
         </Button>
@@ -304,33 +331,44 @@ export default function CreditPage() {
                   />
                 </div>
 
-                {bill.remainingAmount > 0 && (
+                <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full"
-                    onClick={() => openRepay(bill)}
+                    className="flex-1"
+                    onClick={() => openEdit(bill)}
                   >
-                    还款
+                    <Pencil className="w-3.5 h-3.5 mr-1" />
+                    编辑
                   </Button>
-                )}
+                  {bill.remainingAmount > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => openRepay(bill)}
+                    >
+                      还款
+                    </Button>
+                  )}
+                </div>
               </GlassCard>
             );
           })}
         </div>
       )}
 
-      {/* New Bill Dialog */}
-      <Dialog open={newOpen} onOpenChange={setNewOpen}>
+      {/* New / Edit Bill Dialog */}
+      <Dialog open={formOpen} onOpenChange={handleFormClose}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>新建提前消费账单</DialogTitle>
+            <DialogTitle>{editingBill ? "编辑账单" : "新建提前消费账单"}</DialogTitle>
             <DialogDescription>
-              记录一笔花呗、白条等提前消费
+              {editingBill ? "修改账单信息（日期不可变更）" : "记录一笔花呗、白条等提前消费"}
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleNewSubmit} className="space-y-4">
+          <form onSubmit={handleFormSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label>金额</Label>
               <Input
@@ -369,7 +407,7 @@ export default function CreditPage() {
                 onValueChange={(v) => v && setNewForm((prev) => ({ ...prev, categoryId: v }))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="选择分类">
+                  <SelectValue>
                     {(value: string | null) => {
                       if (!value) return "选择分类";
                       const cat = expenseCategories.find((c) => c.id === value);
@@ -403,11 +441,12 @@ export default function CreditPage() {
                 value={newForm.date}
                 onChange={(e) => setNewForm((prev) => ({ ...prev, date: e.target.value }))}
                 required
+                disabled={!!editingBill}
               />
             </div>
 
-            <Button type="submit" className="w-full" disabled={newLoading}>
-              {newLoading ? "创建中..." : "创建"}
+            <Button type="submit" className="w-full" disabled={formLoading}>
+              {formLoading ? "保存中..." : editingBill ? "保存修改" : "创建"}
             </Button>
           </form>
         </DialogContent>
@@ -454,7 +493,13 @@ export default function CreditPage() {
                 onValueChange={(v) => v && setRepayForm((prev) => ({ ...prev, accountId: v }))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="选择账户" />
+                  <SelectValue>
+                    {(value: string | null) => {
+                      if (!value) return "选择账户";
+                      const acct = accounts.find((a) => a.id === value);
+                      return acct ? acct.name : "选择账户";
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {accounts.map((a) => (

@@ -69,6 +69,52 @@ export async function POST(req: Request) {
   }
 }
 
+export async function PUT(req: Request) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const body = await req.json();
+    const { id, amount, source, description, categoryId } = body;
+
+    if (!id || !amount || !source || !categoryId) {
+      return NextResponse.json({ error: "请填写必要字段" }, { status: 400 });
+    }
+
+    const userId = session.user.id!;
+
+    const bill = await db
+      .select()
+      .from(creditBills)
+      .where(eq(creditBills.id, id))
+      .get();
+
+    if (!bill || bill.userId !== userId) {
+      return NextResponse.json({ error: "账单不存在" }, { status: 404 });
+    }
+
+    // 如果还没还过款，总金额变化时同步更新剩余金额
+    const newAmount = Number(amount);
+    const updates: Record<string, unknown> = {
+      amount: newAmount,
+      source,
+      description: description || "",
+      categoryId,
+    };
+
+    if (bill.remainingAmount === bill.amount) {
+      updates.remainingAmount = newAmount;
+    }
+
+    await db.update(creditBills).set(updates).where(eq(creditBills.id, id));
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Update credit bill error:", error);
+    return NextResponse.json({ error: "更新失败" }, { status: 500 });
+  }
+}
+
 export async function DELETE(req: Request) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
