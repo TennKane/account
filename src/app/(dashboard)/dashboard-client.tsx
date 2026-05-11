@@ -132,6 +132,7 @@ export function DashboardClient({
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
                   <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
                   <Tooltip
+                    offset={24}
                     contentStyle={{
                       background: "hsl(var(--popover))",
                       border: "1px solid hsl(var(--border))",
@@ -173,6 +174,7 @@ export function DashboardClient({
                       ))}
                     </Pie>
                     <Tooltip
+                      offset={24}
                       contentStyle={{
                         background: "hsl(var(--popover))",
                         border: "1px solid hsl(var(--border))",
