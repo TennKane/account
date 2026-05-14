@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Wallet, Plus, Trash2, Edit3, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 const accountTypeLabels: Record<string, string> = {
   cash: "现金",
@@ -29,6 +30,7 @@ const accountTypeLabels: Record<string, string> = {
   credit: "信用卡",
   savings: "储蓄",
   wallet: "电子钱包",
+  advance: "提前消费",
 };
 
 interface Account {
@@ -129,6 +131,8 @@ export default function AccountsPage() {
   }
 
   const totalBalance = accounts.reduce((sum, a) => sum + a.balance, 0);
+  const totalAssets = accounts.filter((a) => a.type !== "advance").reduce((sum, a) => sum + a.balance, 0);
+  const totalDebt = accounts.filter((a) => a.type === "advance").reduce((sum, a) => sum + a.balance, 0);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -140,13 +144,21 @@ export default function AccountsPage() {
         </Button>
       </div>
 
-      {/* 总资产 */}
-      <GlassCard className="p-6 text-center">
-        <p className="text-sm text-muted-foreground mb-1">总资产</p>
-        <p className="text-3xl font-bold text-primary">
-          ¥{totalBalance.toFixed(2)}
-        </p>
-      </GlassCard>
+      {/* 总资产 / 总负债 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <GlassCard className="p-6 text-center">
+          <p className="text-sm text-muted-foreground mb-1">总资产</p>
+          <p className="text-3xl font-bold text-primary">
+            ¥{totalAssets.toFixed(2)}
+          </p>
+        </GlassCard>
+        <GlassCard className="p-6 text-center">
+          <p className="text-sm text-muted-foreground mb-1">总负债</p>
+          <p className="text-3xl font-bold text-destructive">
+            ¥{Math.abs(totalDebt).toFixed(2)}
+          </p>
+        </GlassCard>
+      </div>
 
       {/* 账户列表 */}
       {loading ? (
@@ -196,8 +208,8 @@ export default function AccountsPage() {
                     </button>
                   </div>
                 </div>
-                <p className="text-xl font-semibold mt-3 pointer-events-none">
-                  ¥{account.balance.toFixed(2)}
+                <p className={cn("text-xl font-semibold mt-3 pointer-events-none", account.type === "advance" && "text-destructive")}>
+                  {account.type === "advance" ? `-¥${Math.abs(account.balance).toFixed(2)}` : `¥${account.balance.toFixed(2)}`}
                 </p>
               </Link>
             </GlassCard>

@@ -15,6 +15,7 @@ const accountTypeLabels: Record<string, string> = {
   credit: "信用卡",
   savings: "储蓄",
   wallet: "电子钱包",
+  advance: "提前消费",
 };
 
 export default async function AccountDetailPage({
@@ -81,11 +82,13 @@ export default async function AccountDetailPage({
         </div>
       </div>
 
-      {/* 账户余额 */}
+      {/* 账户余额 / 负债 */}
       <GlassCard className="p-6 text-center">
-        <p className="text-sm text-muted-foreground mb-1">当前余额</p>
-        <p className="text-3xl font-bold text-primary">
-          ¥{account.balance.toFixed(2)}
+        <p className="text-sm text-muted-foreground mb-1">
+          {account.type === "advance" ? "当前负债" : "当前余额"}
+        </p>
+        <p className={`text-3xl font-bold ${account.type === "advance" ? "text-destructive" : "text-primary"}`}>
+          {account.type === "advance" ? `¥${Math.abs(account.balance).toFixed(2)}` : `¥${account.balance.toFixed(2)}`}
         </p>
       </GlassCard>
 

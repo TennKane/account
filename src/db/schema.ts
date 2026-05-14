@@ -13,7 +13,7 @@ export const users = sqliteTable("users", {
 export const accounts = sqliteTable("accounts", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  type: text("type", { enum: ["cash", "bank", "credit", "savings", "wallet"] })
+  type: text("type", { enum: ["cash", "bank", "credit", "savings", "wallet", "advance"] })
     .notNull()
     .default("cash"),
   balance: real("balance").notNull().default(0),

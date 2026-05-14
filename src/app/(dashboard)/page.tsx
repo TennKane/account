@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { transactions, accounts, creditBills, categories } from "@/db/schema";
-import { eq, and, gte, sql } from "drizzle-orm";
+import { eq, and, gte, ne, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { DashboardClient } from "./dashboard-client";
 
@@ -43,13 +43,18 @@ export default async function DashboardPage() {
     )
     .get();
 
-  // 总资产
+  // 总资产（不含提前消费负债）
   const accountsResult = await db
     .select({
       total: sql<number>`COALESCE(SUM(${accounts.balance}), 0)`,
     })
     .from(accounts)
-    .where(eq(accounts.userId, userId))
+    .where(
+      and(
+        eq(accounts.userId, userId),
+        ne(accounts.type, "advance")
+      )
+    )
     .get();
 
   // 提前消费待还
