@@ -15,6 +15,13 @@
       "when": 1778508299583,
       "tag": "0001_furry_spot",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1779081605717,
+      "tag": "0002_swift_northstar",
+      "breakpoints": true
     }
   ]
 }

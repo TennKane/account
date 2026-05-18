@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
-import { creditBills, categories } from "@/db/schema";
+import { creditBills, categories, accounts } from "@/db/schema";
 import { eq, and, gte, lt, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
@@ -66,16 +66,38 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "请填写必要字段" }, { status: 400 });
     }
 
+    const billId = randomUUID();
+    const numAmount = Number(amount);
+
     await db.insert(creditBills).values({
-      id: randomUUID(),
-      amount: Number(amount),
-      remainingAmount: Number(amount),
+      id: billId,
+      amount: numAmount,
+      remainingAmount: numAmount,
       source,
       description: description || "",
       date: date ? new Date(date) : new Date(),
       categoryId,
       userId: session.user.id!,
     });
+
+    // 关联对应的 advance 账户并更新负债
+    const advanceAccount = await db
+      .select()
+      .from(accounts)
+      .where(and(eq(accounts.name, source), eq(accounts.userId, session.user.id!), eq(accounts.type, "advance")))
+      .get();
+
+    if (advanceAccount) {
+      await db
+        .update(creditBills)
+        .set({ accountId: advanceAccount.id })
+        .where(eq(creditBills.id, billId));
+
+      await db
+        .update(accounts)
+        .set({ balance: advanceAccount.balance - numAmount })
+        .where(eq(accounts.id, advanceAccount.id));
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -108,17 +130,62 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "账单不存在" }, { status: 404 });
     }
 
-    // 如果还没还过款，总金额变化时同步更新剩余金额
     const newAmount = Number(amount);
     const updates: Record<string, unknown> = {
-      amount: newAmount,
       source,
       description: description || "",
       categoryId,
     };
 
+    // Handle amount change
     if (bill.remainingAmount === bill.amount) {
+      updates.amount = newAmount;
       updates.remainingAmount = newAmount;
+    } else {
+      updates.amount = newAmount;
+    }
+
+    // Handle source change — relink to different advance account
+    if (source !== bill.source) {
+      // Unlink from old account
+      if (bill.accountId) {
+        const oldAccount = await db
+          .select()
+          .from(accounts)
+          .where(eq(accounts.id, bill.accountId))
+          .get();
+        if (oldAccount) {
+          await db
+            .update(accounts)
+            .set({ balance: oldAccount.balance + bill.remainingAmount })
+            .where(eq(accounts.id, oldAccount.id));
+        }
+      }
+
+      // Link to new account
+      const newAccount = await db
+        .select()
+        .from(accounts)
+        .where(and(eq(accounts.name, source), eq(accounts.userId, userId), eq(accounts.type, "advance")))
+        .get();
+
+      if (newAccount) {
+        const newRemaining = bill.remainingAmount === bill.amount ? newAmount : bill.remainingAmount;
+        updates.accountId = newAccount.id;
+        await db
+          .update(accounts)
+          .set({ balance: newAccount.balance - newRemaining })
+          .where(eq(accounts.id, newAccount.id));
+      } else {
+        updates.accountId = null;
+      }
+    } else if (bill.accountId && bill.remainingAmount === bill.amount && newAmount !== bill.amount) {
+      // Same source, amount changed, not yet repaid — sync balance difference
+      const diff = newAmount - bill.amount;
+      await db
+        .update(accounts)
+        .set({ balance: sql`${accounts.balance} - ${diff}` })
+        .where(eq(accounts.id, bill.accountId));
     }
 
     await db.update(creditBills).set(updates).where(eq(creditBills.id, id));
@@ -147,6 +214,21 @@ export async function DELETE(req: Request) {
 
     if (!bill || bill.userId !== session.user.id!) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    // 删除前恢复 advance 账户的负债（减去这笔债务）
+    if (bill.accountId) {
+      const acct = await db
+        .select()
+        .from(accounts)
+        .where(eq(accounts.id, bill.accountId))
+        .get();
+      if (acct) {
+        await db
+          .update(accounts)
+          .set({ balance: acct.balance + bill.remainingAmount })
+          .where(eq(accounts.id, bill.accountId));
+      }
     }
 
     await db.delete(creditBills).where(eq(creditBills.id, id));

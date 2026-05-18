@@ -1,0 +1,1 @@
+ALTER TABLE `credit_bills` ADD `account_id` text REFERENCES accounts(id);

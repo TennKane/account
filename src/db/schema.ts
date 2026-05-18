@@ -66,6 +66,8 @@ export const creditBills = sqliteTable("credit_bills", {
   remainingAmount: real("remaining_amount").notNull(),
   description: text("description").default(""),
   source: text("source").notNull(),
+  accountId: text("account_id")
+    .references(() => accounts.id, { onDelete: "set null" }),
   date: integer("date", { mode: "timestamp" }).notNull(),
   categoryId: text("category_id")
     .notNull()

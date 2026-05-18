@@ -72,6 +72,21 @@ export async function POST(req: Request) {
       .set({ remainingAmount: newRemaining })
       .where(eq(creditBills.id, billId));
 
+    // 4. 同步 advance 账户负债（负债减少）
+    if (bill.accountId) {
+      const advanceAcct = await db
+        .select()
+        .from(accounts)
+        .where(eq(accounts.id, bill.accountId))
+        .get();
+      if (advanceAcct) {
+        await db
+          .update(accounts)
+          .set({ balance: advanceAcct.balance + repayAmount })
+          .where(eq(accounts.id, bill.accountId));
+      }
+    }
+
     return NextResponse.json({
       success: true,
       remainingAmount: newRemaining,
