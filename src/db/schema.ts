@@ -92,6 +92,8 @@ export const receivables = sqliteTable("receivables", {
   description: text("description").default(""),
   date: integer("date", { mode: "timestamp" }).notNull(),
   settledDate: integer("settled_date", { mode: "timestamp" }),
+  accountId: text("account_id")
+    .references(() => accounts.id, { onDelete: "set null" }),
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),

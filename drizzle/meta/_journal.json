@@ -43,6 +43,13 @@
       "when": 1779086739807,
       "tag": "0005_spotty_rockslide",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1779087301118,
+      "tag": "0006_smart_clint_barton",
+      "breakpoints": true
     }
   ]
 }

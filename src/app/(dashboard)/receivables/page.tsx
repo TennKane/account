@@ -36,6 +36,8 @@ interface Receivable {
   description: string | null;
   date: string | number | Date;
   settledDate: string | number | Date | null;
+  accountId?: string | null;
+  accountName?: string | null;
 }
 
 interface Account {
@@ -237,9 +239,10 @@ export default function ReceivablesPage() {
                   <div>
                     <p className="text-lg font-semibold">¥{item.amount.toFixed(2)}</p>
                     {item.settledDate && (
-                      <p className="text-xs text-green-500">
-                        还清于 {new Date(item.settledDate).toLocaleDateString("zh-CN")}
-                      </p>
+                      <div className="text-xs text-green-500 space-y-0.5">
+                        <p>还清于 {new Date(item.settledDate).toLocaleDateString("zh-CN")}</p>
+                        {item.accountName && <p>入款账户：{item.accountName}</p>}
+                      </div>
                     )}
                   </div>
                   {item.remainingAmount > 0 && (

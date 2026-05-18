@@ -1,0 +1,1 @@
+ALTER TABLE `receivables` ADD `account_id` text REFERENCES accounts(id);

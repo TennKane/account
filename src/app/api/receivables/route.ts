@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
-import { receivables } from "@/db/schema";
+import { receivables, accounts } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
@@ -10,8 +10,19 @@ export async function GET() {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const list = await db
-    .select()
+    .select({
+      id: receivables.id,
+      amount: receivables.amount,
+      remainingAmount: receivables.remainingAmount,
+      person: receivables.person,
+      description: receivables.description,
+      date: receivables.date,
+      settledDate: receivables.settledDate,
+      accountId: receivables.accountId,
+      accountName: accounts.name,
+    })
     .from(receivables)
+    .leftJoin(accounts, eq(receivables.accountId, accounts.id))
     .where(eq(receivables.userId, session.user.id!))
     .orderBy(sql`${receivables.date} DESC`)
     .all();

@@ -27,7 +27,10 @@ export async function POST(req: Request) {
     }
 
     const newRemaining = bill.remainingAmount - repayAmount;
-    const updates: Record<string, unknown> = { remainingAmount: newRemaining };
+    const updates: Record<string, unknown> = {
+      remainingAmount: newRemaining,
+      accountId, // 记录入款账户
+    };
     if (newRemaining <= 0) {
       updates.settledDate = new Date(date);
     }
