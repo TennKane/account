@@ -20,7 +20,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Wallet, Plus, Trash2, Edit3, Loader2 } from "lucide-react";
+import { Wallet, Plus, Trash2, Edit3, Loader2, Star } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +38,7 @@ interface Account {
   name: string;
   type: string;
   balance: number;
+  isDefault: number;
 }
 
 export default function AccountsPage() {
@@ -130,6 +131,20 @@ export default function AccountsPage() {
     setDeleting(false);
   }
 
+  async function handleSetDefault(id: string) {
+    const res = await fetch("/api/accounts", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, isDefault: true }),
+    });
+    if (res.ok) {
+      toast.success("已设为默认账户");
+      fetchAccounts();
+    } else {
+      toast.error("设置失败");
+    }
+  }
+
   const totalBalance = accounts.reduce((sum, a) => sum + a.balance, 0);
   const totalAssets = accounts.filter((a) => a.type !== "advance").reduce((sum, a) => sum + a.balance, 0);
   const totalDebt = accounts.filter((a) => a.type === "advance").reduce((sum, a) => sum + a.balance, 0);
@@ -188,6 +203,14 @@ export default function AccountsPage() {
                   </p>
                 </Link>
                 <div className="flex gap-1 shrink-0 ml-4">
+                  <button
+                    onClick={() => handleSetDefault(account.id)}
+                    className={`p-2 transition-colors ${account.isDefault ? 'text-amber-500' : 'text-muted-foreground hover:text-amber-500'}`}
+                    type="button"
+                    title={account.isDefault ? "默认账户" : "设为默认账户"}
+                  >
+                    <Star className={`w-4 h-4 ${account.isDefault ? 'fill-amber-500' : ''}`} />
+                  </button>
                   <button
                     onClick={() => openEdit(account)}
                     className="p-2 hover:text-primary transition-colors"

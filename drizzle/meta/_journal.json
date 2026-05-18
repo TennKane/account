@@ -22,6 +22,13 @@
       "when": 1779081605717,
       "tag": "0002_swift_northstar",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1779085657275,
+      "tag": "0003_lethal_whistler",
+      "breakpoints": true
     }
   ]
 }

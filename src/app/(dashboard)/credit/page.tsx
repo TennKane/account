@@ -44,6 +44,7 @@ interface CreditBill {
 interface Account {
   id: string;
   name: string;
+  isDefault?: number;
 }
 
 interface Category {
@@ -199,7 +200,7 @@ export default function CreditPage() {
     setRepayBill(bill);
     setRepayForm({
       amount: String(bill.remainingAmount),
-      accountId: accounts[0]?.id || "",
+      accountId: accounts.find((a) => a.isDefault)?.id || accounts[0]?.id || "",
     });
     setRepayOpen(true);
   }
