@@ -175,43 +175,36 @@ export default function AccountsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {accounts.map((account) => (
             <GlassCard key={account.id} className="p-5">
-              <Link href={`/accounts/${account.id}`} className="block active:scale-[0.98] transition-transform">
-                <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between">
+                <Link href={`/accounts/${account.id}`} className="flex-1 active:scale-[0.98] transition-transform">
                   <div className="pointer-events-none">
                     <p className="font-semibold">{account.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {accountTypeLabels[account.type] || account.type}
                     </p>
                   </div>
-                  <div
-                    className="flex gap-1"
-                    onClick={(e) => e.stopPropagation()}
+                  <p className={cn("text-xl font-semibold mt-3 pointer-events-none", account.type === "advance" && "text-destructive")}>
+                    {account.type === "advance" ? `-¥${Math.abs(account.balance).toFixed(2)}` : `¥${account.balance.toFixed(2)}`}
+                  </p>
+                </Link>
+                <div className="flex gap-1 shrink-0 ml-4">
+                  <button
+                    onClick={() => openEdit(account)}
+                    className="p-2 hover:text-primary transition-colors"
+                    type="button"
                   >
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openEdit(account);
-                      }}
-                      className="p-2 hover:text-primary transition-colors"
-                    >
-                      <Edit3 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(account.id, account.name);
-                      }}
-                      disabled={deleting}
-                      className="p-2 hover:text-destructive transition-colors disabled:opacity-50"
-                    >
-                      {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                    </button>
-                  </div>
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(account.id, account.name)}
+                    disabled={deleting}
+                    className="p-2 hover:text-destructive transition-colors disabled:opacity-50"
+                    type="button"
+                  >
+                    {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  </button>
                 </div>
-                <p className={cn("text-xl font-semibold mt-3 pointer-events-none", account.type === "advance" && "text-destructive")}>
-                  {account.type === "advance" ? `-¥${Math.abs(account.balance).toFixed(2)}` : `¥${account.balance.toFixed(2)}`}
-                </p>
-              </Link>
+              </div>
             </GlassCard>
           ))}
         </div>
