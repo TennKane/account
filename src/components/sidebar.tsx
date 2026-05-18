@@ -11,6 +11,7 @@ import {
   Wallet,
   Tags,
   CreditCard,
+  Handshake,
   Settings,
   LogOut,
   Loader2,
@@ -20,6 +21,7 @@ const navItems = [
   { label: "仪表盘", href: "/", icon: LayoutDashboard },
   { label: "账单", href: "/transactions", icon: ArrowLeftRight },
   { label: "提前消费", href: "/credit", icon: CreditCard },
+  { label: "应收款", href: "/receivables", icon: Handshake },
   { label: "账户", href: "/accounts", icon: Wallet },
   { label: "分类", href: "/categories", icon: Tags },
 ];

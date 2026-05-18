@@ -81,6 +81,22 @@ export const creditBills = sqliteTable("credit_bills", {
     .$defaultFn(() => new Date()),
 });
 
+export const receivables = sqliteTable("receivables", {
+  id: text("id").primaryKey(),
+  amount: real("amount").notNull(),
+  remainingAmount: real("remaining_amount").notNull(),
+  person: text("person").notNull(),
+  description: text("description").default(""),
+  date: integer("date", { mode: "timestamp" }).notNull(),
+  settledDate: integer("settled_date", { mode: "timestamp" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Account = typeof accounts.$inferSelect;
@@ -91,3 +107,5 @@ export type Transaction = typeof transactions.$inferSelect;
 export type NewTransaction = typeof transactions.$inferInsert;
 export type CreditBill = typeof creditBills.$inferSelect;
 export type NewCreditBill = typeof creditBills.$inferInsert;
+export type Receivable = typeof receivables.$inferSelect;
+export type NewReceivable = typeof receivables.$inferInsert;
