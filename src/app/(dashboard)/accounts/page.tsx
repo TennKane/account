@@ -144,7 +144,7 @@ export default function AccountsPage() {
         </Button>
       </div>
 
-      {/* 总资产 / 总负债 */}
+      {/* 总资产 / 总提前消费 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <GlassCard className="p-6 text-center">
           <p className="text-sm text-muted-foreground mb-1">总资产</p>
@@ -153,7 +153,7 @@ export default function AccountsPage() {
           </p>
         </GlassCard>
         <GlassCard className="p-6 text-center">
-          <p className="text-sm text-muted-foreground mb-1">总负债</p>
+          <p className="text-sm text-muted-foreground mb-1">总提前消费</p>
           <p className="text-3xl font-bold text-destructive">
             ¥{Math.abs(totalDebt).toFixed(2)}
           </p>
