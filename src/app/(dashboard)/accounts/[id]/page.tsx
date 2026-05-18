@@ -1,10 +1,10 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
-import { accounts, transactions, categories } from "@/db/schema";
+import { accounts, transactions, creditBills, categories } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight, ArrowDownRight, Receipt } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, ArrowDownRight, Receipt, CreditCard } from "lucide-react";
 import { GlassCard } from "@/components/glass-card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -38,8 +38,27 @@ export default async function AccountDetailPage({
 
   if (!account || account.userId !== userId) redirect("/accounts");
 
-  // 该账户的交易
-  const txList = await db
+  // advance 账户：查关联的 credit_bills；其他账户：查 transactions
+  const isAdvance = account.type === "advance";
+
+  const billList = isAdvance ? await db
+    .select({
+      id: creditBills.id,
+      amount: creditBills.amount,
+      remainingAmount: creditBills.remainingAmount,
+      description: creditBills.description,
+      date: creditBills.date,
+      categoryName: categories.name,
+      categoryIcon: categories.icon,
+      categoryColor: categories.color,
+    })
+    .from(creditBills)
+    .leftJoin(categories, eq(creditBills.categoryId, categories.id))
+    .where(eq(creditBills.accountId, id))
+    .orderBy(sql`${creditBills.date} DESC`)
+    .all() : [];
+
+  const txList = !isAdvance ? await db
     .select({
       id: transactions.id,
       amount: transactions.amount,
@@ -54,7 +73,7 @@ export default async function AccountDetailPage({
     .leftJoin(categories, eq(transactions.categoryId, categories.id))
     .where(eq(transactions.accountId, id))
     .orderBy(sql`${transactions.date} DESC`)
-    .all();
+    .all() : [];
 
   // 统计数据
   const totalIncome = txList
@@ -64,6 +83,8 @@ export default async function AccountDetailPage({
   const totalExpense = txList
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.amount, 0);
+
+  const advanceTotal = billList.reduce((sum, b) => sum + b.amount, 0);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -94,46 +115,124 @@ export default async function AccountDetailPage({
 
       {/* 统计摘要 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <GlassCard className="p-5">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-9 h-9 rounded-xl bg-green-500/15 flex items-center justify-center">
-              <ArrowUpRight className="w-4 h-4 text-green-500" />
-            </div>
-            <span className="text-sm text-muted-foreground">总收入</span>
-          </div>
-          <p className="text-xl font-semibold text-green-500">
-            ¥{totalIncome.toFixed(2)}
-          </p>
-        </GlassCard>
-
-        <GlassCard className="p-5">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-9 h-9 rounded-xl bg-red-500/15 flex items-center justify-center">
-              <ArrowDownRight className="w-4 h-4 text-red-500" />
-            </div>
-            <span className="text-sm text-muted-foreground">总支出</span>
-          </div>
-          <p className="text-xl font-semibold text-red-500">
-            ¥{totalExpense.toFixed(2)}
-          </p>
-        </GlassCard>
-
-        <GlassCard className="p-5">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center">
-              <Receipt className="w-4 h-4 text-primary" />
-            </div>
-            <span className="text-sm text-muted-foreground">交易笔数</span>
-          </div>
-          <p className="text-xl font-semibold">{txList.length} 笔</p>
-        </GlassCard>
+        {isAdvance ? (
+          <>
+            <GlassCard className="p-5">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-9 h-9 rounded-xl bg-red-500/15 flex items-center justify-center">
+                  <ArrowDownRight className="w-4 h-4 text-red-500" />
+                </div>
+                <span className="text-sm text-muted-foreground">总消费</span>
+              </div>
+              <p className="text-xl font-semibold text-red-500">
+                ¥{advanceTotal.toFixed(2)}
+              </p>
+            </GlassCard>
+            <GlassCard className="p-5">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-9 h-9 rounded-xl bg-green-500/15 flex items-center justify-center">
+                  <ArrowUpRight className="w-4 h-4 text-green-500" />
+                </div>
+                <span className="text-sm text-muted-foreground">已还</span>
+              </div>
+              <p className="text-xl font-semibold text-green-500">
+                ¥{(advanceTotal - billList.reduce((s, b) => s + b.remainingAmount, 0)).toFixed(2)}
+              </p>
+            </GlassCard>
+            <GlassCard className="p-5">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center">
+                  <CreditCard className="w-4 h-4 text-primary" />
+                </div>
+                <span className="text-sm text-muted-foreground">账单笔数</span>
+              </div>
+              <p className="text-xl font-semibold">{billList.length} 笔</p>
+            </GlassCard>
+          </>
+        ) : (
+          <>
+            <GlassCard className="p-5">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-9 h-9 rounded-xl bg-green-500/15 flex items-center justify-center">
+                  <ArrowUpRight className="w-4 h-4 text-green-500" />
+                </div>
+                <span className="text-sm text-muted-foreground">总收入</span>
+              </div>
+              <p className="text-xl font-semibold text-green-500">
+                ¥{totalIncome.toFixed(2)}
+              </p>
+            </GlassCard>
+            <GlassCard className="p-5">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-9 h-9 rounded-xl bg-red-500/15 flex items-center justify-center">
+                  <ArrowDownRight className="w-4 h-4 text-red-500" />
+                </div>
+                <span className="text-sm text-muted-foreground">总支出</span>
+              </div>
+              <p className="text-xl font-semibold text-red-500">
+                ¥{totalExpense.toFixed(2)}
+              </p>
+            </GlassCard>
+            <GlassCard className="p-5">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center">
+                  <Receipt className="w-4 h-4 text-primary" />
+                </div>
+                <span className="text-sm text-muted-foreground">交易笔数</span>
+              </div>
+              <p className="text-xl font-semibold">{txList.length} 笔</p>
+            </GlassCard>
+          </>
+        )}
       </div>
 
-      {/* 交易流水 */}
+      {/* 流水 / 账单 */}
       <GlassCard className="p-6">
-        <h2 className="font-semibold mb-4">交易流水</h2>
+        <h2 className="font-semibold mb-4">{isAdvance ? "消费账单" : "交易流水"}</h2>
 
-        {txList.length === 0 ? (
+        {isAdvance ? (
+          billList.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>该账户暂无消费账单</p>
+              <Link href="/credit">
+                <Button variant="outline" className="mt-3">
+                  去记一笔
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {billList.map((b) => (
+                <div
+                  key={b.id}
+                  className="flex items-center gap-4 p-3 rounded-xl hover:bg-accent/50 transition-colors"
+                >
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
+                    style={{ backgroundColor: `${b.categoryColor}20` }}
+                  >
+                    {b.categoryIcon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{b.categoryName}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {b.description || "无备注"}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-semibold text-red-500">
+                      -¥{b.amount.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(b.date).toLocaleDateString("zh-CN")}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        ) : txList.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <Receipt className="w-12 h-12 mx-auto mb-3 opacity-50" />
             <p>该账户暂无交易记录</p>
