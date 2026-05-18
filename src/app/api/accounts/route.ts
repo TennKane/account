@@ -46,7 +46,7 @@ export async function PUT(req: Request) {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { id, name, type, isDefault, isDefaultTx, isDefaultRepay, isDefaultReceive } = await req.json();
+    const { id, name, type, isDefault, isDefaultTx, isDefaultRepay, isDefaultReceive, isDefaultAdvance } = await req.json();
     const userId = session.user.id!;
 
     // 验证账户归属
@@ -91,6 +91,13 @@ export async function PUT(req: Request) {
       updates.isDefaultReceive = 1;
     } else if (isDefaultReceive === false) {
       updates.isDefaultReceive = 0;
+    }
+
+    if (isDefaultAdvance === true) {
+      await db.update(accounts).set({ isDefaultAdvance: 0 }).where(eq(accounts.userId, userId));
+      updates.isDefaultAdvance = 1;
+    } else if (isDefaultAdvance === false) {
+      updates.isDefaultAdvance = 0;
     }
 
     await db.update(accounts).set(updates).where(eq(accounts.id, id));

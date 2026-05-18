@@ -1,0 +1,1 @@
+ALTER TABLE `accounts` ADD `is_default_advance` integer DEFAULT 0 NOT NULL;

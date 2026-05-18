@@ -45,6 +45,7 @@ interface Account {
   id: string;
   name: string;
   isDefaultRepay?: number;
+  isDefaultAdvance?: number;
 }
 
 interface Category {
@@ -73,7 +74,7 @@ export default function CreditPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [newForm, setNewForm] = useState({
     amount: "",
-    source: "花呗",
+    source: "",
     description: "",
     date: getTodayLocal(),
     categoryId: "",
@@ -113,7 +114,13 @@ export default function CreditPage() {
     try {
       const res = await fetch("/api/accounts");
       const data = await res.json();
-      if (Array.isArray(data)) setAccounts(data);
+      if (Array.isArray(data)) {
+        setAccounts(data);
+        const defaultAdv = data.find((a: any) => a.isDefaultAdvance);
+        if (defaultAdv) {
+          setNewForm((prev) => ({ ...prev, source: defaultAdv.name }));
+        }
+      }
     } catch {
       // ignore
     }
@@ -140,9 +147,10 @@ export default function CreditPage() {
 
   function openNew() {
     setEditingBill(null);
+    const defaultAdv = accounts.find((a) => a.isDefaultAdvance);
     setNewForm({
       amount: "",
-      source: "花呗",
+      source: defaultAdv?.name || "花呗",
       description: "",
       date: getTodayLocal(),
       categoryId: "",

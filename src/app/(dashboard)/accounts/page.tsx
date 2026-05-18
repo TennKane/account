@@ -20,7 +20,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Wallet, Plus, Trash2, Edit3, Loader2, Star, ArrowLeftRight, CreditCard, Handshake } from "lucide-react";
+import { Wallet, Plus, Trash2, Edit3, Loader2, ArrowLeftRight, CreditCard, Handshake, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +42,7 @@ interface Account {
   isDefaultTx: number;
   isDefaultRepay: number;
   isDefaultReceive: number;
+  isDefaultAdvance: number;
 }
 
 export default function AccountsPage() {
@@ -145,6 +146,7 @@ export default function AccountsPage() {
         isDefaultTx: "账单默认账户",
         isDefaultRepay: "还款默认账户",
         isDefaultReceive: "收款默认账户",
+        isDefaultAdvance: "提前消费默认来源",
       };
       toast.success(`已设为${labels[field] || "默认"}`);
       fetchAccounts();
@@ -219,6 +221,14 @@ export default function AccountsPage() {
                       title={account.isDefaultTx ? "账单默认" : "设为账单默认"}
                     >
                       <ArrowLeftRight className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleSetDefault(account.id, "isDefaultAdvance")}
+                      className={`p-1.5 rounded-md transition-colors ${account.isDefaultAdvance ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-primary hover:bg-primary/10'}`}
+                      type="button"
+                      title={account.isDefaultAdvance ? "提前消费默认" : "设为提前消费默认"}
+                    >
+                      <ShoppingCart className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => handleSetDefault(account.id, "isDefaultRepay")}
