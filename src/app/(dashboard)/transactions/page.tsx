@@ -47,7 +47,7 @@ interface Account {
   id: string;
   name: string;
   type: string;
-  isDefault?: number;
+  isDefaultTx?: number;
 }
 
 interface Category {
@@ -112,7 +112,7 @@ export default function TransactionsPage() {
     const data = await res.json();
     setAccounts(data);
     if (data.length > 0 && !formData.accountId) {
-      const defaultAccount = data.find((a: any) => a.isDefault) || data[0];
+      const defaultAccount = data.find((a: any) => a.isDefaultTx) || data[0];
       setFormData((prev) => ({ ...prev, accountId: defaultAccount.id }));
     }
   }, [formData.accountId]);
@@ -148,7 +148,7 @@ export default function TransactionsPage() {
       description: "",
       date: getTodayLocal(),
       time: new Date().toTimeString().slice(0, 5),
-      accountId: accounts.find((a) => a.isDefault)?.id || accounts[0]?.id || "",
+      accountId: accounts.find((a) => a.isDefaultTx)?.id || accounts[0]?.id || "",
       categoryId: "",
     });
     setOpen(true);

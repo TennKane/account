@@ -46,7 +46,7 @@ export async function PUT(req: Request) {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const { id, name, type, isDefault } = await req.json();
+    const { id, name, type, isDefault, isDefaultTx, isDefaultRepay, isDefaultReceive } = await req.json();
     const userId = session.user.id!;
 
     // 验证账户归属
@@ -63,15 +63,34 @@ export async function PUT(req: Request) {
     if (name !== undefined) updates.name = name;
     if (type !== undefined) updates.type = type;
 
-    // 设为默认：清除其他账户的默认标记
+    // 通用默认（排序用）
     if (isDefault === true) {
-      await db
-        .update(accounts)
-        .set({ isDefault: 0 })
-        .where(eq(accounts.userId, userId));
+      await db.update(accounts).set({ isDefault: 0 }).where(eq(accounts.userId, userId));
       updates.isDefault = 1;
     } else if (isDefault === false) {
       updates.isDefault = 0;
+    }
+
+    // 账单默认（各自独立，互不干扰）
+    if (isDefaultTx === true) {
+      await db.update(accounts).set({ isDefaultTx: 0 }).where(eq(accounts.userId, userId));
+      updates.isDefaultTx = 1;
+    } else if (isDefaultTx === false) {
+      updates.isDefaultTx = 0;
+    }
+
+    if (isDefaultRepay === true) {
+      await db.update(accounts).set({ isDefaultRepay: 0 }).where(eq(accounts.userId, userId));
+      updates.isDefaultRepay = 1;
+    } else if (isDefaultRepay === false) {
+      updates.isDefaultRepay = 0;
+    }
+
+    if (isDefaultReceive === true) {
+      await db.update(accounts).set({ isDefaultReceive: 0 }).where(eq(accounts.userId, userId));
+      updates.isDefaultReceive = 1;
+    } else if (isDefaultReceive === false) {
+      updates.isDefaultReceive = 0;
     }
 
     await db.update(accounts).set(updates).where(eq(accounts.id, id));

@@ -19,6 +19,9 @@ export const accounts = sqliteTable("accounts", {
   balance: real("balance").notNull().default(0),
   currency: text("currency").notNull().default("CNY"),
   isDefault: integer("is_default").notNull().default(0),
+  isDefaultTx: integer("is_default_tx").notNull().default(0),
+  isDefaultRepay: integer("is_default_repay").notNull().default(0),
+  isDefaultReceive: integer("is_default_receive").notNull().default(0),
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),

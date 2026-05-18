@@ -41,7 +41,7 @@ interface Receivable {
 interface Account {
   id: string;
   name: string;
-  isDefault?: number;
+  isDefaultReceive?: number;
 }
 
 export default function ReceivablesPage() {
@@ -119,7 +119,7 @@ export default function ReceivablesPage() {
     setRepayForm({
       amount: String(item.remainingAmount),
       date: getTodayLocal(),
-      accountId: accounts.find((a) => a.isDefault)?.id || accounts[0]?.id || "",
+      accountId: accounts.find((a) => a.isDefaultReceive)?.id || accounts[0]?.id || "",
     });
     setRepayOpen(true);
   }

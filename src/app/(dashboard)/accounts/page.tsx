@@ -20,7 +20,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Wallet, Plus, Trash2, Edit3, Loader2, Star } from "lucide-react";
+import { Wallet, Plus, Trash2, Edit3, Loader2, Star, ArrowLeftRight, CreditCard, Handshake } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +39,9 @@ interface Account {
   type: string;
   balance: number;
   isDefault: number;
+  isDefaultTx: number;
+  isDefaultRepay: number;
+  isDefaultReceive: number;
 }
 
 export default function AccountsPage() {
@@ -131,14 +134,19 @@ export default function AccountsPage() {
     setDeleting(false);
   }
 
-  async function handleSetDefault(id: string) {
+  async function handleSetDefault(id: string, field: string) {
     const res = await fetch("/api/accounts", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, isDefault: true }),
+      body: JSON.stringify({ id, [field]: true }),
     });
     if (res.ok) {
-      toast.success("已设为默认账户");
+      const labels: Record<string, string> = {
+        isDefaultTx: "账单默认账户",
+        isDefaultRepay: "还款默认账户",
+        isDefaultReceive: "收款默认账户",
+      };
+      toast.success(`已设为${labels[field] || "默认"}`);
       fetchAccounts();
     } else {
       toast.error("设置失败");
@@ -202,30 +210,52 @@ export default function AccountsPage() {
                     {account.type === "advance" ? `-¥${Math.abs(account.balance).toFixed(2)}` : `¥${account.balance.toFixed(2)}`}
                   </p>
                 </Link>
-                <div className="flex gap-1 shrink-0 ml-4">
-                  <button
-                    onClick={() => handleSetDefault(account.id)}
-                    className={`p-2 transition-colors ${account.isDefault ? 'text-amber-500' : 'text-muted-foreground hover:text-amber-500'}`}
-                    type="button"
-                    title={account.isDefault ? "默认账户" : "设为默认账户"}
-                  >
-                    <Star className={`w-4 h-4 ${account.isDefault ? 'fill-amber-500' : ''}`} />
-                  </button>
-                  <button
-                    onClick={() => openEdit(account)}
-                    className="p-2 hover:text-primary transition-colors"
-                    type="button"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(account.id, account.name)}
-                    disabled={deleting}
-                    className="p-2 hover:text-destructive transition-colors disabled:opacity-50"
-                    type="button"
-                  >
-                    {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                  </button>
+                <div className="flex flex-col gap-0.5 shrink-0 ml-4">
+                  <div className="flex gap-0.5 justify-end">
+                    <button
+                      onClick={() => handleSetDefault(account.id, "isDefaultTx")}
+                      className={`p-1.5 rounded-md transition-colors ${account.isDefaultTx ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-primary hover:bg-primary/10'}`}
+                      type="button"
+                      title={account.isDefaultTx ? "账单默认" : "设为账单默认"}
+                    >
+                      <ArrowLeftRight className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleSetDefault(account.id, "isDefaultRepay")}
+                      className={`p-1.5 rounded-md transition-colors ${account.isDefaultRepay ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-primary hover:bg-primary/10'}`}
+                      type="button"
+                      title={account.isDefaultRepay ? "还款默认" : "设为还款默认"}
+                    >
+                      <CreditCard className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleSetDefault(account.id, "isDefaultReceive")}
+                      className={`p-1.5 rounded-md transition-colors ${account.isDefaultReceive ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-primary hover:bg-primary/10'}`}
+                      type="button"
+                      title={account.isDefaultReceive ? "收款默认" : "设为收款默认"}
+                    >
+                      <Handshake className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <div className="flex gap-0.5 justify-end">
+                    <button
+                      onClick={() => openEdit(account)}
+                      className="p-1.5 rounded-md hover:text-primary hover:bg-primary/10 transition-colors text-muted-foreground"
+                      type="button"
+                      title="编辑"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(account.id, account.name)}
+                      disabled={deleting}
+                      className="p-1.5 rounded-md hover:text-destructive hover:bg-destructive/10 transition-colors text-muted-foreground disabled:opacity-50"
+                      type="button"
+                      title="删除"
+                    >
+                      {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
                 </div>
               </div>
             </GlassCard>
