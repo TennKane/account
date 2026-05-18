@@ -238,7 +238,9 @@ export default function AccountsPage() {
                 onValueChange={(v) => v && setFormData((prev) => ({ ...prev, type: v }))}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {(value: string | null) => value ? (accountTypeLabels[value] || value) : "选择类型"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(accountTypeLabels).map(([value, label]) => (
