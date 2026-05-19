@@ -65,6 +65,8 @@ export default async function AccountDetailPage({
       type: transactions.type,
       description: transactions.description,
       date: transactions.date,
+      accountId: transactions.accountId,
+      toAccountId: transactions.toAccountId,
       categoryName: categories.name,
       categoryIcon: categories.icon,
       categoryColor: categories.color,
@@ -75,6 +77,28 @@ export default async function AccountDetailPage({
     .orderBy(sql`${transactions.date} DESC`)
     .all() : [];
 
+  // 包含转入本账户的交易
+  const inTxList = !isAdvance ? await db
+    .select({
+      id: transactions.id,
+      amount: transactions.amount,
+      type: transactions.type,
+      description: transactions.description,
+      date: transactions.date,
+      accountId: transactions.accountId,
+      toAccountId: transactions.toAccountId,
+      categoryName: categories.name,
+      categoryIcon: categories.icon,
+      categoryColor: categories.color,
+    })
+    .from(transactions)
+    .leftJoin(categories, eq(transactions.categoryId, categories.id))
+    .where(sql`${transactions.toAccountId} = ${id}`)
+    .orderBy(sql`${transactions.date} DESC`)
+    .all() : [];
+
+  const allTxList = [...txList, ...inTxList].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
   // 统计数据
   const totalIncome = txList
     .filter((t) => t.type === "income")
@@ -83,6 +107,9 @@ export default async function AccountDetailPage({
   const totalExpense = txList
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.amount, 0);
+
+  // 转入本账户（视作收入）
+  const incomingTransfers = inTxList.reduce((sum, t) => sum + t.amount, 0);
 
   const advanceTotal = billList.reduce((sum, b) => sum + b.amount, 0);
 
@@ -159,7 +186,7 @@ export default async function AccountDetailPage({
                 <span className="text-sm text-muted-foreground">总收入</span>
               </div>
               <p className="text-xl font-semibold text-green-500">
-                ¥{totalIncome.toFixed(2)}
+                ¥{(totalIncome + incomingTransfers).toFixed(2)}
               </p>
             </GlassCard>
             <GlassCard className="p-5">
@@ -180,7 +207,7 @@ export default async function AccountDetailPage({
                 </div>
                 <span className="text-sm text-muted-foreground">交易笔数</span>
               </div>
-              <p className="text-xl font-semibold">{txList.length} 笔</p>
+              <p className="text-xl font-semibold">{allTxList.length} 笔</p>
             </GlassCard>
           </>
         )}
@@ -232,7 +259,7 @@ export default async function AccountDetailPage({
               ))}
             </div>
           )
-        ) : txList.length === 0 ? (
+        ) : allTxList.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <Receipt className="w-12 h-12 mx-auto mb-3 opacity-50" />
             <p>该账户暂无交易记录</p>
@@ -244,38 +271,49 @@ export default async function AccountDetailPage({
           </div>
         ) : (
           <div className="space-y-1">
-            {txList.map((tx) => (
-              <div
-                key={tx.id}
-                className="flex items-center gap-4 p-3 rounded-xl hover:bg-accent/50 transition-colors"
-              >
+            {allTxList.map((tx) => {
+              const isIncoming = tx.toAccountId && tx.toAccountId === id;
+              return (
                 <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
-                  style={{ backgroundColor: `${tx.categoryColor}20` }}
+                  key={`${tx.id}-${isIncoming ? 'in' : 'out'}`}
+                  className="flex items-center gap-4 p-3 rounded-xl hover:bg-accent/50 transition-colors"
                 >
-                  {tx.categoryIcon}
+                  {tx.toAccountId ? (
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 bg-primary/15 text-primary">
+                      ↔
+                    </div>
+                  ) : (
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
+                      style={{ backgroundColor: `${tx.categoryColor}20` }}
+                    >
+                      {tx.categoryIcon}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">
+                      {tx.toAccountId ? "转账" : tx.categoryName}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {tx.description || "无备注"}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p
+                      className={cn(
+                        "text-sm font-semibold",
+                        isIncoming ? "text-green-500" : "text-red-500"
+                      )}
+                    >
+                      {isIncoming ? "+" : "-"}¥{tx.amount.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(tx.date).toLocaleDateString("zh-CN")}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{tx.categoryName}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {tx.description || "无备注"}
-                  </p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p
-                    className={cn(
-                      "text-sm font-semibold",
-                      tx.type === "income" ? "text-green-500" : "text-red-500"
-                    )}
-                  >
-                    {tx.type === "income" ? "+" : "-"}¥{tx.amount.toFixed(2)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(tx.date).toLocaleDateString("zh-CN")}
-                  </p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </GlassCard>
