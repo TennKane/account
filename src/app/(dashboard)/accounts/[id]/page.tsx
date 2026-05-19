@@ -177,41 +177,7 @@ export default async function AccountDetailPage({
               <p className="text-xl font-semibold">{billList.length} 笔</p>
             </GlassCard>
           </>
-        ) : (
-          <>
-            <GlassCard className="p-5">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-9 h-9 rounded-xl bg-green-500/15 flex items-center justify-center">
-                  <ArrowUpRight className="w-4 h-4 text-green-500" />
-                </div>
-                <span className="text-sm text-muted-foreground">总收入</span>
-              </div>
-              <p className="text-xl font-semibold text-green-500">
-                ¥{totalIncome.toFixed(2)}
-              </p>
-            </GlassCard>
-            <GlassCard className="p-5">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-9 h-9 rounded-xl bg-red-500/15 flex items-center justify-center">
-                  <ArrowDownRight className="w-4 h-4 text-red-500" />
-                </div>
-                <span className="text-sm text-muted-foreground">总支出</span>
-              </div>
-              <p className="text-xl font-semibold text-red-500">
-                ¥{(totalExpense + totalTransferOut).toFixed(2)}
-              </p>
-            </GlassCard>
-            <GlassCard className="p-5">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center">
-                  <Receipt className="w-4 h-4 text-primary" />
-                </div>
-                <span className="text-sm text-muted-foreground">交易笔数</span>
-              </div>
-              <p className="text-xl font-semibold">{allTxList.length} 笔</p>
-            </GlassCard>
-          </>
-        )}
+        ) : null}
       </div>
 
       {/* 流水 / 账单 */}
