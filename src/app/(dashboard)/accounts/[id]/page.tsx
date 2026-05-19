@@ -269,10 +269,10 @@ export default async function AccountDetailPage({
         ) : (
           <div className="space-y-1">
             {allTxList.map((tx) => {
-              const isIncoming = tx.toAccountId && tx.toAccountId === id;
+              const isPositive = (tx.toAccountId && tx.toAccountId === id) || (!tx.toAccountId && tx.type === "income");
               return (
                 <div
-                  key={`${tx.id}-${isIncoming ? 'in' : 'out'}`}
+                  key={`${tx.id}-${isPositive ? 'in' : 'out'}`}
                   className="flex items-center gap-4 p-3 rounded-xl hover:bg-accent/50 transition-colors"
                 >
                   {tx.toAccountId ? (
@@ -299,10 +299,10 @@ export default async function AccountDetailPage({
                     <p
                       className={cn(
                         "text-sm font-semibold",
-                        isIncoming ? "text-green-500" : "text-red-500"
+                        isPositive ? "text-green-500" : "text-red-500"
                       )}
                     >
-                      {isIncoming ? "+" : "-"}¥{tx.amount.toFixed(2)}
+                      {isPositive ? "+" : "-"}¥{tx.amount.toFixed(2)}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {new Date(tx.date).toLocaleDateString("zh-CN")}
