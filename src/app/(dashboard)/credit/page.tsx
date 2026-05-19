@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, CreditCard, CheckCircle2, Circle } from "lucide-react";
+import { Plus, Pencil, Trash2, CreditCard, CheckCircle2, Circle, CheckSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -91,6 +91,15 @@ export default function CreditPage() {
   const [repayLoading, setRepayLoading] = useState(false);
   const [repayForm, setRepayForm] = useState({
     amount: "",
+    accountId: "",
+  });
+
+  // Batch repay
+  const [selectedBillIds, setSelectedBillIds] = useState<Set<string>>(new Set());
+  const [batchRepayOpen, setBatchRepayOpen] = useState(false);
+  const [batchRepayLoading, setBatchRepayLoading] = useState(false);
+  const [batchRepayForm, setBatchRepayForm] = useState({
+    date: getTodayLocal(),
     accountId: "",
   });
 
@@ -257,15 +266,62 @@ export default function CreditPage() {
 
   const expenseCategories = categories.filter((c) => c.type === "expense");
 
+  const selectedBills = unpaid.filter((b) => selectedBillIds.has(b.id));
+  const selectedTotal = selectedBills.reduce((s, b) => s + b.remainingAmount, 0);
+
+  async function handleBatchRepay() {
+    if (selectedBills.length === 0) return;
+    setBatchRepayLoading(true);
+
+    // 逐个全额还款
+    for (const bill of selectedBills) {
+      const res = await fetch("/api/credit-bills/repay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          billId: bill.id,
+          amount: bill.remainingAmount,
+          accountId: batchRepayForm.accountId,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(`「${bill.categoryName}」还款失败：${data.error || "未知错误"}`);
+        setBatchRepayLoading(false);
+        return;
+      }
+    }
+
+    toast.success(`已还清 ${selectedBills.length} 笔账单`);
+    setBatchRepayOpen(false);
+    setSelectedBillIds(new Set());
+    setBatchRepayLoading(false);
+    fetchBills();
+    fetchAccounts();
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">提前消费</h1>
-        <Button onClick={openNew} className="gap-2">
-          <Plus className="w-4 h-4" />
-          新建账单
-        </Button>
+        <div className="flex gap-2">
+          {selectedBillIds.size > 0 && (
+            <>
+              <Button variant="outline" onClick={() => { setSelectedBillIds(new Set()); }}>
+                取消选择 ({selectedBillIds.size})
+              </Button>
+              <Button onClick={() => { setBatchRepayForm((p) => ({ ...p, accountId: accounts.find((a) => a.isDefaultRepay)?.id || accounts[0]?.id || "" })); setBatchRepayOpen(true); }} className="gap-2">
+                <CheckSquare className="w-4 h-4" />
+                批量还款 ¥{selectedTotal.toFixed(2)}
+              </Button>
+            </>
+          )}
+          <Button onClick={openNew} className="gap-2">
+            <Plus className="w-4 h-4" />
+            新建账单
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -348,10 +404,25 @@ export default function CreditPage() {
               ? ((bill.amount - bill.remainingAmount) / bill.amount) * 100
               : 100;
 
+            const isSelected = selectedBillIds.has(bill.id);
+
             return (
-              <GlassCard key={bill.id} className="p-5 active:scale-[0.98] transition-transform">
+              <GlassCard key={bill.id} className={`p-5 active:scale-[0.98] transition-transform ${isSelected ? 'ring-2 ring-primary' : ''}`}>
                 <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
+                  {tab === "unpaid" && (
+                    <button
+                      onClick={() => {
+                        const next = new Set(selectedBillIds);
+                        if (isSelected) next.delete(bill.id); else next.add(bill.id);
+                        setSelectedBillIds(next);
+                      }}
+                      className={`w-5 h-5 rounded border-2 shrink-0 mt-1 mr-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-primary border-primary text-primary-foreground' : 'border-muted-foreground/30 hover:border-primary'}`}
+                      type="button"
+                    >
+                      {isSelected && <CheckSquare className="w-3.5 h-3.5" />}
+                    </button>
+                  )}
+                  <div className="flex items-center gap-3 flex-1">
                     <div
                       className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
                       style={{ backgroundColor: `${bill.categoryColor}20` }}
@@ -638,6 +709,47 @@ export default function CreditPage() {
 
             <Button type="submit" className="w-full" disabled={repayLoading}>
               {repayLoading ? "还款中..." : "确认还款"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Batch Repay Dialog */}
+      <Dialog open={batchRepayOpen} onOpenChange={(open) => { setBatchRepayOpen(open); if (!open) setSelectedBillIds(new Set()); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>批量还款</DialogTitle>
+            <DialogDescription>
+              将全额还清选中的 {selectedBills.length} 笔账单，共 ¥{selectedTotal.toFixed(2)}
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={(e) => { e.preventDefault(); handleBatchRepay(); }} className="space-y-4">
+            <div className="space-y-2">
+              <Label>还款账户</Label>
+              <Select
+                value={batchRepayForm.accountId}
+                onValueChange={(v) => v && setBatchRepayForm((p) => ({ ...p, accountId: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue>
+                    {(value: string | null) => {
+                      if (!value) return "选择账户";
+                      const acct = accounts.find((a) => a.id === value);
+                      return acct ? acct.name : "选择账户";
+                    }}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button type="submit" className="w-full" disabled={batchRepayLoading}>
+              {batchRepayLoading ? "还款中..." : `确认还款 ¥${selectedTotal.toFixed(2)}`}
             </Button>
           </form>
         </DialogContent>
