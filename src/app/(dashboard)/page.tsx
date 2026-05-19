@@ -24,7 +24,8 @@ export default async function DashboardPage() {
       and(
         eq(transactions.userId, userId),
         eq(transactions.type, "income"),
-        gte(transactions.date, startOfMonth)
+        gte(transactions.date, startOfMonth),
+        sql`${transactions.toAccountId} IS NULL`
       )
     )
     .get();
@@ -38,7 +39,8 @@ export default async function DashboardPage() {
       and(
         eq(transactions.userId, userId),
         eq(transactions.type, "expense"),
-        gte(transactions.date, startOfMonth)
+        gte(transactions.date, startOfMonth),
+        sql`${transactions.toAccountId} IS NULL`
       )
     )
     .get();
@@ -97,7 +99,8 @@ export default async function DashboardPage() {
     .where(
       and(
         eq(transactions.userId, userId),
-        gte(transactions.date, sixMonthsAgo)
+        gte(transactions.date, sixMonthsAgo),
+        sql`${transactions.toAccountId} IS NULL`
       )
     )
     .all();
@@ -139,7 +142,8 @@ export default async function DashboardPage() {
       and(
         eq(transactions.userId, userId),
         eq(transactions.type, "expense"),
-        gte(transactions.date, startOfMonth)
+        gte(transactions.date, startOfMonth),
+        sql`${transactions.toAccountId} IS NULL`
       )
     )
     .groupBy(transactions.categoryId)
@@ -149,7 +153,10 @@ export default async function DashboardPage() {
   const recentTransactions = await db
     .select()
     .from(transactions)
-    .where(eq(transactions.userId, userId))
+    .where(and(
+      eq(transactions.userId, userId),
+      sql`${transactions.toAccountId} IS NULL`
+    ))
     .orderBy(sql`${transactions.date} DESC`)
     .limit(5)
     .all();

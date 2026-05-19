@@ -99,17 +99,14 @@ export default async function AccountDetailPage({
 
   const allTxList = [...txList, ...inTxList].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  // 统计数据
+  // 统计数据（不含转账）
   const totalIncome = txList
-    .filter((t) => t.type === "income")
+    .filter((t) => t.type === "income" && !t.toAccountId)
     .reduce((sum, t) => sum + t.amount, 0);
 
   const totalExpense = txList
-    .filter((t) => t.type === "expense")
+    .filter((t) => t.type === "expense" && !t.toAccountId)
     .reduce((sum, t) => sum + t.amount, 0);
-
-  // 转入本账户（视作收入）
-  const incomingTransfers = inTxList.reduce((sum, t) => sum + t.amount, 0);
 
   const advanceTotal = billList.reduce((sum, b) => sum + b.amount, 0);
 
@@ -186,7 +183,7 @@ export default async function AccountDetailPage({
                 <span className="text-sm text-muted-foreground">总收入</span>
               </div>
               <p className="text-xl font-semibold text-green-500">
-                ¥{(totalIncome + incomingTransfers).toFixed(2)}
+                ¥{totalIncome.toFixed(2)}
               </p>
             </GlassCard>
             <GlassCard className="p-5">
