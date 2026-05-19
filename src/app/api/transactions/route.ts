@@ -41,8 +41,10 @@ export async function GET(req: Request) {
       description: transactions.description,
       date: transactions.date,
       accountId: transactions.accountId,
+      toAccountId: transactions.toAccountId,
       categoryId: transactions.categoryId,
       accountName: accounts.name,
+      toAccountName: sql`(SELECT name FROM accounts WHERE id = ${transactions.toAccountId})`,
       categoryName: categories.name,
       categoryIcon: categories.icon,
       categoryColor: categories.color,
@@ -63,39 +65,65 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { amount, type, description, date, accountId, categoryId } = body;
+    const { amount, type, description, date, accountId, categoryId, toAccountId } = body;
 
-    if (!amount || !type || !accountId || !categoryId) {
+    if (!amount || !type || !accountId) {
       return NextResponse.json({ error: "请填写必要字段" }, { status: 400 });
     }
 
     const userId = session.user.id!;
+    const numAmount = Number(amount);
+    const isTransfer = toAccountId && toAccountId !== accountId;
 
     // 创建交易
     const txId = randomUUID();
     await db.insert(transactions).values({
       id: txId,
-      amount: Number(amount),
-      type,
+      amount: numAmount,
+      type: isTransfer ? "expense" : type,
       description: description || "",
       date: date ? new Date(date) : new Date(),
       accountId,
-      categoryId,
+      toAccountId: isTransfer ? toAccountId : null,
+      categoryId: isTransfer ? "" : (categoryId || ""),
       userId,
     });
 
     // 更新账户余额
-    const account = await db
+    const fromAccount = await db
       .select()
       .from(accounts)
       .where(eq(accounts.id, accountId))
       .get();
 
-    if (account) {
-      const balanceChange = type === "income" ? Number(amount) : -Number(amount);
+    if (!fromAccount) {
+      return NextResponse.json({ error: "账户不存在" }, { status: 400 });
+    }
+
+    if (isTransfer) {
+      // 转账：扣减 source
       await db
         .update(accounts)
-        .set({ balance: account.balance + balanceChange })
+        .set({ balance: fromAccount.balance - numAmount })
+        .where(eq(accounts.id, accountId));
+      // 转账：增加 target
+      const toAccount = await db
+        .select()
+        .from(accounts)
+        .where(eq(accounts.id, toAccountId))
+        .get();
+      if (toAccount) {
+        await db
+          .update(accounts)
+          .set({ balance: toAccount.balance + numAmount })
+          .where(eq(accounts.id, toAccountId));
+      }
+    } else {
+      // 标准收入/支出
+      const balanceChange = type === "income" ? numAmount : -numAmount;
+      await db
+        .update(accounts)
+        .set({ balance: fromAccount.balance + balanceChange })
         .where(eq(accounts.id, accountId));
     }
 
@@ -112,9 +140,9 @@ export async function PUT(req: Request) {
 
   try {
     const body = await req.json();
-    const { id, type, amount, description, categoryId, accountId } = body;
+    const { id, type, amount, description, categoryId, accountId, toAccountId } = body;
 
-    if (!id || !amount || !type || !accountId || !categoryId) {
+    if (!id || !amount || !accountId) {
       return NextResponse.json({ error: "请填写必要字段" }, { status: 400 });
     }
 
@@ -131,47 +159,66 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "交易不存在" }, { status: 404 });
     }
 
-    // 撤销原交易对旧账户的余额影响
-    const oldAccount = await db
+    // 撤销原交易的余额影响
+    const wasTransfer = !!oldTx.toAccountId;
+    const oldFromAccount = await db
       .select()
       .from(accounts)
       .where(eq(accounts.id, oldTx.accountId))
       .get();
-
-    if (oldAccount) {
-      const reverseAmount = oldTx.type === "income" ? -oldTx.amount : oldTx.amount;
-      await db
-        .update(accounts)
-        .set({ balance: oldAccount.balance + reverseAmount })
-        .where(eq(accounts.id, oldTx.accountId));
+    if (oldFromAccount) {
+      if (wasTransfer) {
+        // 原转账：加回扣款
+        await db.update(accounts).set({ balance: oldFromAccount.balance + oldTx.amount }).where(eq(accounts.id, oldTx.accountId));
+      } else {
+        const reverse = oldTx.type === "income" ? -oldTx.amount : oldTx.amount;
+        await db.update(accounts).set({ balance: oldFromAccount.balance + reverse }).where(eq(accounts.id, oldTx.accountId));
+      }
+    }
+    if (wasTransfer && oldTx.toAccountId) {
+      const oldToAccount = await db.select().from(accounts).where(eq(accounts.id, oldTx.toAccountId)).get();
+      if (oldToAccount) {
+        // 撤销原入账
+        await db.update(accounts).set({ balance: oldToAccount.balance - oldTx.amount }).where(eq(accounts.id, oldTx.toAccountId));
+      }
     }
 
-    // 应用新交易对新账户的余额影响（即使账户没变也重新计算）
-    const newAccount = await db
-      .select()
-      .from(accounts)
-      .where(eq(accounts.id, accountId))
-      .get();
+    // 应用新交易
+    const numAmount = Number(amount);
+    const isTransfer = toAccountId && toAccountId !== accountId;
 
-    if (newAccount) {
-      const balanceChange = type === "income" ? Number(amount) : -Number(amount);
-      await db
-        .update(accounts)
-        .set({ balance: newAccount.balance + balanceChange })
-        .where(eq(accounts.id, accountId));
+    const newFromAccount = await db.select().from(accounts).where(eq(accounts.id, accountId)).get();
+    if (newFromAccount) {
+      if (isTransfer) {
+        await db.update(accounts).set({ balance: newFromAccount.balance - numAmount }).where(eq(accounts.id, accountId));
+      } else {
+        const change = type === "income" ? numAmount : -numAmount;
+        await db.update(accounts).set({ balance: newFromAccount.balance + change }).where(eq(accounts.id, accountId));
+      }
+    }
+    if (isTransfer) {
+      const newToAccount = await db.select().from(accounts).where(eq(accounts.id, toAccountId)).get();
+      if (newToAccount) {
+        await db.update(accounts).set({ balance: newToAccount.balance + numAmount }).where(eq(accounts.id, toAccountId));
+      }
     }
 
     // 更新交易记录
-    await db
-      .update(transactions)
-      .set({
-        type,
-        amount: Number(amount),
-        description: description || "",
-        categoryId,
-        accountId,
-      })
-      .where(eq(transactions.id, id));
+    const updates: Record<string, unknown> = {
+      amount: numAmount,
+      description: description || "",
+      accountId,
+      toAccountId: isTransfer ? toAccountId : null,
+    };
+    if (isTransfer) {
+      updates.type = "expense";
+      updates.categoryId = "";
+    } else {
+      updates.type = type;
+      updates.categoryId = categoryId || "";
+    }
+
+    await db.update(transactions).set(updates).where(eq(transactions.id, id));
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -198,19 +245,23 @@ export async function DELETE(req: Request) {
 
     if (!tx) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const account = await db
-      .select()
-      .from(accounts)
-      .where(eq(accounts.id, tx.accountId))
-      .get();
-
-    if (account) {
-      // 反向调整余额
-      const balanceAdjust = tx.type === "income" ? -tx.amount : tx.amount;
-      await db
-        .update(accounts)
-        .set({ balance: account.balance + balanceAdjust })
-        .where(eq(accounts.id, tx.accountId));
+    if (tx.toAccountId) {
+      // 转账：加回扣款方
+      const fromAcct = await db.select().from(accounts).where(eq(accounts.id, tx.accountId)).get();
+      if (fromAcct) {
+        await db.update(accounts).set({ balance: fromAcct.balance + tx.amount }).where(eq(accounts.id, tx.accountId));
+      }
+      // 转账：扣减收款方
+      const toAcct = await db.select().from(accounts).where(eq(accounts.id, tx.toAccountId)).get();
+      if (toAcct) {
+        await db.update(accounts).set({ balance: toAcct.balance - tx.amount }).where(eq(accounts.id, tx.toAccountId));
+      }
+    } else {
+      const account = await db.select().from(accounts).where(eq(accounts.id, tx.accountId)).get();
+      if (account) {
+        const balanceAdjust = tx.type === "income" ? -tx.amount : tx.amount;
+        await db.update(accounts).set({ balance: account.balance + balanceAdjust }).where(eq(accounts.id, tx.accountId));
+      }
     }
 
     await db.delete(transactions).where(eq(transactions.id, id));

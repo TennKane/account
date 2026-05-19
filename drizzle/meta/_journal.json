@@ -57,6 +57,13 @@
       "when": 1779102716068,
       "tag": "0007_conscious_shen",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1779209389976,
+      "tag": "0008_reflective_sabretooth",
+      "breakpoints": true
     }
   ]
 }

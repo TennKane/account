@@ -36,6 +36,8 @@ interface Transaction {
   description: string | null;
   date: string | number | Date;
   accountId: string;
+  toAccountId?: string | null;
+  toAccountName?: string | null;
   categoryId: string;
   accountName: string | null;
   categoryName: string | null;
@@ -91,6 +93,8 @@ export default function TransactionsPage() {
     time: new Date().toTimeString().slice(0, 5),
     accountId: "",
     categoryId: "",
+    isTransfer: false,
+    toAccountId: "",
   });
 
   const fetchTransactions = useCallback(async () => {
@@ -150,6 +154,8 @@ export default function TransactionsPage() {
       time: new Date().toTimeString().slice(0, 5),
       accountId: accounts.find((a) => a.isDefaultTx)?.id || accounts[0]?.id || "",
       categoryId: "",
+      isTransfer: false,
+      toAccountId: "",
     });
     setOpen(true);
   }
@@ -167,6 +173,8 @@ export default function TransactionsPage() {
       time: timeStr,
       accountId: tx.accountId,
       categoryId: tx.categoryId,
+      isTransfer: !!(tx as any).toAccountId,
+      toAccountId: (tx as any).toAccountId || "",
     });
     setOpen(true);
   }
@@ -192,6 +200,7 @@ export default function TransactionsPage() {
       dateTime.setHours(Number(hours), Number(minutes));
 
       const isEdit = !!editingTx;
+      const isTransfer = formData.isTransfer && !!formData.toAccountId;
       const res = await fetch("/api/transactions", {
         method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
@@ -203,6 +212,7 @@ export default function TransactionsPage() {
           date: dateTime,
           accountId: formData.accountId,
           categoryId: formData.categoryId,
+          ...(isTransfer ? { toAccountId: formData.toAccountId } : {}),
         }),
       });
 
@@ -318,26 +328,32 @@ export default function TransactionsPage() {
                 key={tx.id}
                 className="flex items-center gap-4 p-3 rounded-xl hover:bg-accent/50 transition-colors group"
               >
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
-                  style={{ backgroundColor: `${tx.categoryColor}20` }}
-                >
-                  {tx.categoryIcon}
-                </div>
+                {tx.toAccountId ? (
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 bg-primary/15 text-primary">
+                    ↔
+                  </div>
+                ) : (
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
+                    style={{ backgroundColor: `${tx.categoryColor}20` }}
+                  >
+                    {tx.categoryIcon}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{tx.categoryName}</p>
+                  <p className="text-sm font-medium">
+                    {tx.toAccountId ? "转账" : tx.categoryName}
+                  </p>
                   <p className="text-xs text-muted-foreground truncate">
-                    {tx.description || "无备注"} · {tx.accountName}
+                    {tx.description || "无备注"}
+                    {tx.toAccountId
+                      ? ` · ${tx.accountName} → ${tx.toAccountName || "?"}`
+                      : ` · ${tx.accountName}`}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p
-                    className={cn(
-                      "text-sm font-semibold",
-                      tx.type === "income" ? "text-green-500" : "text-red-500"
-                    )}
-                  >
-                    {tx.type === "income" ? "+" : "-"}¥{tx.amount.toFixed(2)}
+                  <p className="text-sm font-semibold text-red-500">
+                    -¥{tx.amount.toFixed(2)}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {new Date(tx.date).toLocaleDateString("zh-CN")}{" "}
@@ -417,27 +433,35 @@ export default function TransactionsPage() {
             <div className="flex gap-2">
               <Button
                 type="button"
-                variant={formData.type === "expense" ? "default" : "outline"}
+                variant={!formData.isTransfer && formData.type === "expense" ? "default" : "outline"}
                 className={cn(
                   "flex-1",
-                  formData.type === "expense" && "bg-red-500 hover:bg-red-600"
+                  !formData.isTransfer && formData.type === "expense" && "bg-red-500 hover:bg-red-600"
                 )}
-                onClick={() => setFormData((prev) => ({ ...prev, type: "expense" }))}
+                onClick={() => setFormData((prev) => ({ ...prev, type: "expense", isTransfer: false }))}
               >
                 <ArrowUpRight className="w-4 h-4 mr-1" />
                 支出
               </Button>
               <Button
                 type="button"
-                variant={formData.type === "income" ? "default" : "outline"}
+                variant={!formData.isTransfer && formData.type === "income" ? "default" : "outline"}
                 className={cn(
                   "flex-1",
-                  formData.type === "income" && "bg-green-500 hover:bg-green-600"
+                  !formData.isTransfer && formData.type === "income" && "bg-green-500 hover:bg-green-600"
                 )}
-                onClick={() => setFormData((prev) => ({ ...prev, type: "income" }))}
+                onClick={() => setFormData((prev) => ({ ...prev, type: "income", isTransfer: false }))}
               >
                 <ArrowDownRight className="w-4 h-4 mr-1" />
                 收入
+              </Button>
+              <Button
+                type="button"
+                variant={formData.isTransfer ? "default" : "outline"}
+                className={cn("flex-1", formData.isTransfer && "bg-primary hover:bg-primary/90")}
+                onClick={() => setFormData((prev) => ({ ...prev, isTransfer: true, type: "expense" }))}
+              >
+                ↔ 转账
               </Button>
             </div>
 
@@ -461,35 +485,37 @@ export default function TransactionsPage() {
               </div>
             </div>
 
-            {/* 分类 */}
-            <div className="space-y-2">
-              <Label>分类</Label>
-              <Select
-                value={formData.categoryId}
-                onValueChange={(v) => v && setFormData((prev) => ({ ...prev, categoryId: v }))}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="选择分类">
-                    {(value: string | null) => {
-                      if (!value) return "选择分类";
-                      const cat = filteredCategories.find((c) => c.id === value);
-                      return cat ? `${cat.icon} ${cat.name}` : "选择分类";
-                    }}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredCategories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.icon} {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* 分类（转账模式不显示） */}
+            {!formData.isTransfer && (
+              <div className="space-y-2">
+                <Label>分类</Label>
+                <Select
+                  value={formData.categoryId}
+                  onValueChange={(v) => v && setFormData((prev) => ({ ...prev, categoryId: v }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="选择分类">
+                      {(value: string | null) => {
+                        if (!value) return "选择分类";
+                        const cat = filteredCategories.find((c) => c.id === value);
+                        return cat ? `${cat.icon} ${cat.name}` : "选择分类";
+                      }}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredCategories.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.icon} {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
-            {/* 账户 */}
+            {/* 账户（转出） */}
             <div className="space-y-2">
-              <Label>账户</Label>
+              <Label>{formData.isTransfer ? "转出账户" : "账户"}</Label>
               <Select
                 value={formData.accountId}
                 onValueChange={(v) => v && setFormData((prev) => ({ ...prev, accountId: v }))}
@@ -512,6 +538,34 @@ export default function TransactionsPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* 转入账户（转账模式） */}
+            {formData.isTransfer && (
+              <div className="space-y-2">
+                <Label>转入账户</Label>
+                <Select
+                  value={formData.toAccountId}
+                  onValueChange={(v) => v && setFormData((prev) => ({ ...prev, toAccountId: v }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="选择转入账户">
+                      {(value: string | null) => {
+                        if (!value) return "选择转入账户";
+                        const acct = accounts.find((a) => a.id === value);
+                        return acct ? acct.name : "选择转入账户";
+                      }}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.filter((a) => a.id !== formData.accountId).map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* 日期 */}
             <div className="space-y-2">
