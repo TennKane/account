@@ -1,13 +1,14 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { accounts, transactions, creditBills, categories } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ArrowUpRight, ArrowDownRight, Receipt, CreditCard } from "lucide-react";
 import { GlassCard } from "@/components/glass-card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { CreditBillList } from "./credit-bill-list";
 
 const accountTypeLabels: Record<string, string> = {
   cash: "现金",
@@ -114,6 +115,13 @@ export default async function AccountDetailPage({
 
   const advanceTotal = billList.reduce((sum, b) => sum + b.amount, 0);
 
+  // 分类列表（供账单编辑用）
+  const expenseCategories = !isAdvance ? [] : await db
+    .select()
+    .from(categories)
+    .where(and(eq(categories.userId, userId), eq(categories.type, "expense")))
+    .all();
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* 头部 */}
@@ -185,47 +193,7 @@ export default async function AccountDetailPage({
         <h2 className="font-semibold mb-4">{isAdvance ? "消费账单" : "交易流水"}</h2>
 
         {isAdvance ? (
-          billList.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>该账户暂无消费账单</p>
-              <Link href="/credit">
-                <Button variant="outline" className="mt-3">
-                  去记一笔
-                </Button>
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {billList.map((b) => (
-                <div
-                  key={b.id}
-                  className="flex items-center gap-4 p-3 rounded-xl hover:bg-accent/50 transition-colors"
-                >
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
-                    style={{ backgroundColor: `${b.categoryColor}20` }}
-                  >
-                    {b.categoryIcon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{b.categoryName}</p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {b.description || "无备注"}
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-sm font-semibold text-red-500">
-                      -¥{b.amount.toFixed(2)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(b.date).toLocaleDateString("zh-CN")}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )
+          <CreditBillList bills={billList} categories={expenseCategories} />
         ) : allTxList.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <Receipt className="w-12 h-12 mx-auto mb-3 opacity-50" />
