@@ -49,6 +49,8 @@ export default async function AccountDetailPage({
       remainingAmount: creditBills.remainingAmount,
       description: creditBills.description,
       date: creditBills.date,
+      source: creditBills.source,
+      categoryId: creditBills.categoryId,
       categoryName: categories.name,
       categoryIcon: categories.icon,
       categoryColor: categories.color,

@@ -28,6 +28,8 @@ interface Bill {
   remainingAmount: number;
   description: string | null;
   date: string | number | Date;
+  source: string;
+  categoryId: string | null;
   categoryName: string | null;
   categoryIcon: string | null;
   categoryColor: string | null;
@@ -64,14 +66,14 @@ export function CreditBillList({ bills, categories }: { bills: Bill[]; categorie
     setEditingBill(bill);
     setForm({
       amount: String(bill.amount),
-      source: "",
+      source: bill.source,
       description: bill.description || "",
       date: bill.date instanceof Date
         ? bill.date.toISOString().split("T")[0]
         : typeof bill.date === "string"
           ? bill.date.split("T")[0]
           : new Date(bill.date).toISOString().split("T")[0],
-      categoryId: "",
+      categoryId: bill.categoryId || "",
     });
     setFormOpen(true);
   }
@@ -84,7 +86,7 @@ export function CreditBillList({ bills, categories }: { bills: Bill[]; categorie
       body: JSON.stringify({
         id: billId,
         amount: Number(form.amount),
-        source: editingBill ? sources[0] : form.source,
+        source: form.source,
         description: form.description,
         categoryId: form.categoryId,
       }),
@@ -189,6 +191,20 @@ export function CreditBillList({ bills, categories }: { bills: Bill[]; categorie
                 onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
                 required
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>来源</Label>
+              <Select value={form.source} onValueChange={(v) => v && setForm((p) => ({ ...p, source: v }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {sources.map((s) => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
