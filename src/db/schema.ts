@@ -57,8 +57,7 @@ export const transactions = sqliteTable("transactions", {
   toAccountId: text("to_account_id")
     .references(() => accounts.id, { onDelete: "set null" }),
   categoryId: text("category_id")
-    .notNull()
-    .references(() => categories.id, { onDelete: "cascade" }),
+    .references(() => categories.id, { onDelete: "set null" }),
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),

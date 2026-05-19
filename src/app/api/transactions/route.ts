@@ -85,7 +85,7 @@ export async function POST(req: Request) {
       date: date ? new Date(date) : new Date(),
       accountId,
       toAccountId: isTransfer ? toAccountId : null,
-      categoryId: isTransfer ? "" : (categoryId || ""),
+      categoryId: isTransfer ? null : (categoryId || null),
       userId,
     });
 
@@ -212,10 +212,10 @@ export async function PUT(req: Request) {
     };
     if (isTransfer) {
       updates.type = "expense";
-      updates.categoryId = "";
+      updates.categoryId = null;
     } else {
       updates.type = type;
-      updates.categoryId = categoryId || "";
+      updates.categoryId = categoryId || null;
     }
 
     await db.update(transactions).set(updates).where(eq(transactions.id, id));

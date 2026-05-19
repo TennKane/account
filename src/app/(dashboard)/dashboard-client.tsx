@@ -12,7 +12,7 @@ import {
 import type { Transaction, CreditBill } from "@/db/schema";
 
 interface CategoryExpense {
-  categoryId: string;
+  categoryId: string | null;
   categoryName: string | null;
   categoryIcon: string | null;
   categoryColor: string | null;
